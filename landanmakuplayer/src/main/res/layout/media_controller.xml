@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent" >
+
+
+
+    <LinearLayout
+        android:gravity="right"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:background="#00ffffff" >
+
+        <!--<ImageButton-->
+            <!--android:id="@+id/rotate"-->
+            <!--android:layout_width="wrap_content"-->
+            <!--android:layout_height="wrap_content"-->
+            <!--android:layout_gravity="center_vertical"-->
+            <!--android:background="@android:drawable/ic_menu_always_landscape_portrait"-->
+            <!--android:layout_marginRight="30dp" />-->
+
+        <!--<Button-->
+            <!--android:layout_width="0dp"-->
+            <!--android:layout_weight="1"-->
+            <!--android:id="@+id/btn_hide"-->
+            <!--android:layout_height="wrap_content"-->
+            <!--android:text="@string/hide_danmaku" />-->
+
+        <!--<Button-->
+            <!--android:id="@+id/btn_show"-->
+            <!--android:layout_width="0dp"-->
+            <!--android:layout_weight="1"-->
+            <!--android:layout_height="wrap_content"-->
+            <!--android:text="@string/show_danmaku" />-->
+        <Switch
+            android:id="@+id/switch_hs"
+            android:layout_height="wrap_content"
+            android:layout_width="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:textOff="ON"
+            android:textOn="OFF"
+            android:layout_marginLeft="20dp"
+            android:layout_marginRight="30dp"
+            />
+
+        <ImageButton
+            android:id="@+id/btn_pr"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:background="@android:drawable/ic_media_pause" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="60dip"
+        android:layout_gravity="top"
+        android:background="#00ffffff" >
+        <!--#8a006161-->
+        <EditText
+            android:id="@+id/danmuku_input"
+            android:layout_weight="9"
+            android:layout_width="0dp"
+            android:singleLine="true"
+            android:layout_height="wrap_content"
+            android:imeOptions="flagNoExtractUi"/>
+        <ImageButton
+            android:id="@+id/btn_send"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:layout_marginLeft="20dp"
+            android:layout_marginRight="20dp"
+            android:background="@android:drawable/ic_menu_send" />
+    </LinearLayout>
+
+</FrameLayout>

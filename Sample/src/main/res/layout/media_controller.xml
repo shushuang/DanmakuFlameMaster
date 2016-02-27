@@ -8,6 +8,19 @@
         android:layout_height="60dip"
         android:layout_gravity="top"
         android:background="#8a006161" >
+        <EditText
+            android:id="@+id/danmuku_input"
+            android:layout_weight="9"
+            android:layout_width="0dp"
+            android:singleLine="true"
+            android:layout_height="wrap_content"
+            android:imeOptions="flagNoExtractUi"/>
+        <Button
+            android:id="@+id/btn_send_one"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="发送" />
     </LinearLayout>
 
     <LinearLayout

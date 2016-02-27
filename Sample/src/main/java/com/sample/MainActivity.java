@@ -1,4 +1,3 @@
-
 package com.sample;
 
 import android.app.Activity;
@@ -22,6 +21,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.PopupWindow;
 import android.widget.VideoView;
 
@@ -76,6 +76,11 @@ public class MainActivity extends Activity implements View.OnClickListener {
     private Button mBtnSendDanmakuTextAndImage;
 
     private Button mBtnSendDanmakus;
+
+    private Button mBtnSendOne;
+
+    private EditText mInputText;
+    private VideoView mVideoView;
     private DanmakuContext mContext;
     private BaseCacheStuffer.Proxy mCacheStufferAdapter = new BaseCacheStuffer.Proxy() {
 
@@ -181,7 +186,6 @@ public class MainActivity extends Activity implements View.OnClickListener {
         IDataSource<?> dataSource = loader.getDataSource();
         parser.load(dataSource);
         return parser;
-
     }
 
     private void findViews() {
@@ -195,6 +199,10 @@ public class MainActivity extends Activity implements View.OnClickListener {
         mBtnSendDanmaku = (Button) findViewById(R.id.btn_send);
         mBtnSendDanmakuTextAndImage = (Button) findViewById(R.id.btn_send_image_text);
         mBtnSendDanmakus = (Button) findViewById(R.id.btn_send_danmakus);
+        mInputText = (EditText) findViewById(R.id.danmuku_input);
+        mBtnSendOne = (Button) findViewById(R.id.btn_send_one);
+
+
         mBtnRotate.setOnClickListener(this);
         mBtnHideDanmaku.setOnClickListener(this);
         mMediaController.setOnClickListener(this);
@@ -204,9 +212,11 @@ public class MainActivity extends Activity implements View.OnClickListener {
         mBtnSendDanmaku.setOnClickListener(this);
         mBtnSendDanmakuTextAndImage.setOnClickListener(this);
         mBtnSendDanmakus.setOnClickListener(this);
+        mBtnSendOne.setOnClickListener(this);
+
 
         // VideoView
-        VideoView mVideoView = (VideoView) findViewById(R.id.videoview);
+        mVideoView = (VideoView) findViewById(R.id.videoview);
         // DanmakuView
 
         // 设置最大显示行数
@@ -225,7 +235,8 @@ public class MainActivity extends Activity implements View.OnClickListener {
         .setMaximumLines(maxLinesPair)
         .preventOverlapping(overlappingEnablePair);
         if (mDanmakuView != null) {
-            mParser = createParser(this.getResources().openRawResource(R.raw.comments));
+            //mParser = createParser(this.getResources().openRawResource(R.raw.comments));
+            mParser = createParser(null);
             mDanmakuView.setCallback(new master.flame.danmaku.controller.DrawHandler.Callback() {
                 @Override
                 public void updateTimer(DanmakuTimer timer) {
@@ -268,7 +279,6 @@ public class MainActivity extends Activity implements View.OnClickListener {
                 }
             });
         }
-
         if (mVideoView != null) {
             mVideoView.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
                 @Override
@@ -276,7 +286,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
                     mediaPlayer.start();
                 }
             });
-            mVideoView.setVideoPath(Environment.getExternalStorageDirectory() + "/1.flv");
+            mVideoView.setVideoPath(Environment.getExternalStorageDirectory() + "/Test.3gp");
         }
 
     }
@@ -342,7 +352,27 @@ public class MainActivity extends Activity implements View.OnClickListener {
             mDanmakuView.pause();
         } else if (v == mBtnResumeDanmaku) {
             mDanmakuView.resume();
-        } else if (v == mBtnSendDanmaku) {
+        } else if(v==mBtnSendOne){
+            BaseDanmaku danmaku = mContext.mDanmakuFactory.createDanmaku(BaseDanmaku.TYPE_SCROLL_RL);
+            if (danmaku == null || mDanmakuView == null) {
+                return;
+            }
+            danmaku.text = mInputText.getText().toString();
+            danmaku.padding = 5;
+            danmaku.priority = 1;
+            danmaku.isLive = true;
+            danmaku.time = mDanmakuView.getCurrentTime() + 1200;
+            danmaku.textSize = 25f * (mParser.getDisplayer().getDensity() - 0.6f);
+            danmaku.textColor = Color.RED;
+            danmaku.textShadowColor = Color.WHITE;
+            // danmaku.underlineColor = Color.GREEN;
+            danmaku.borderColor = Color.GREEN;
+            mDanmakuView.addDanmaku(danmaku);
+            // 视频继续播放
+            mVideoView.start();
+            mInputText.setText("");
+        }
+        else if (v == mBtnSendDanmaku) {
             addDanmaku(false);
         } else if (v == mBtnSendDanmakuTextAndImage) {
             addDanmaKuShowTextAndImage(false);
@@ -379,8 +409,6 @@ public class MainActivity extends Activity implements View.OnClickListener {
         if (danmaku == null || mDanmakuView == null) {
             return;
         }
-        // for(int i=0;i<100;i++){
-        // }
         danmaku.text = "这是一条弹幕" + System.nanoTime();
         danmaku.padding = 5;
         danmaku.priority = 0;  // 可能会被各种过滤器过滤并隐藏显示
@@ -392,7 +420,6 @@ public class MainActivity extends Activity implements View.OnClickListener {
         // danmaku.underlineColor = Color.GREEN;
         danmaku.borderColor = Color.GREEN;
         mDanmakuView.addDanmaku(danmaku);
-
     }
 
     private void addDanmaKuShowTextAndImage(boolean islive) {
@@ -421,5 +448,4 @@ public class MainActivity extends Activity implements View.OnClickListener {
         spannableStringBuilder.setSpan(new BackgroundColorSpan(Color.parseColor("#8A2233B1")), 0, spannableStringBuilder.length(), Spannable.SPAN_INCLUSIVE_INCLUSIVE);
         return spannableStringBuilder;
     }
-
 }

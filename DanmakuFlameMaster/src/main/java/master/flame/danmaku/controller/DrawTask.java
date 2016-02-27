@@ -17,7 +17,6 @@
 package master.flame.danmaku.controller;
 
 import android.graphics.Canvas;
-import master.flame.danmaku.danmaku.util.SystemClock;
 
 import master.flame.danmaku.danmaku.model.AbsDisplayer;
 import master.flame.danmaku.danmaku.model.BaseDanmaku;
@@ -32,6 +31,7 @@ import master.flame.danmaku.danmaku.parser.BaseDanmakuParser;
 import master.flame.danmaku.danmaku.renderer.IRenderer;
 import master.flame.danmaku.danmaku.renderer.IRenderer.RenderingState;
 import master.flame.danmaku.danmaku.renderer.android.DanmakuRenderer;
+import master.flame.danmaku.danmaku.util.SystemClock;
 
 public class DrawTask implements IDrawTask {
 
@@ -66,6 +66,8 @@ public class DrawTask implements IDrawTask {
     private boolean mIsHidden;
 
     private BaseDanmaku mLastDanmaku;
+
+    private Danmakus mLiveDanmakus = new Danmakus(Danmakus.ST_BY_LIST);
 
     private ConfigChangedCallback mConfigChangedCallback = new ConfigChangedCallback() {
         @Override
@@ -113,6 +115,7 @@ public class DrawTask implements IDrawTask {
         if (danmakuList == null)
             return;
         if (item.isLive) {
+            mLiveDanmakus.addItem(item);
             removeUnusedLiveDanmakusIn(10);
         }
         item.index = danmakuList.size();
@@ -149,10 +152,19 @@ public class DrawTask implements IDrawTask {
     }
     
     @Override
-    public synchronized void removeAllDanmakus() {
+    public synchronized void removeAllDanmakus(boolean isClearDanmakusOnScreen) {
         if (danmakuList == null || danmakuList.isEmpty())
             return;
-        danmakuList.clear();
+        synchronized (danmakuList) {
+            if (!isClearDanmakusOnScreen) {
+                long beginMills = mTimer.currMillisecond - mContext.mDanmakuFactory.MAX_DANMAKU_DURATION - 100;
+                long endMills = mTimer.currMillisecond + mContext.mDanmakuFactory.MAX_DANMAKU_DURATION;
+                IDanmakus tempDanmakus = danmakuList.subnew(beginMills, endMills);
+                if (tempDanmakus != null)
+                    danmakus = tempDanmakus;
+            }
+            danmakuList.clear();
+        }
     }
 
     protected void onDanmakuRemoved(BaseDanmaku danmaku) {
@@ -176,16 +188,19 @@ public class DrawTask implements IDrawTask {
     }
 
     protected synchronized void removeUnusedLiveDanmakusIn(int msec) {
-        if (danmakuList == null || danmakuList.isEmpty())
+        if (danmakuList == null || danmakuList.isEmpty() || mLiveDanmakus.isEmpty())
             return;
         long startTime = SystemClock.uptimeMillis();
-        IDanmakuIterator it = danmakuList.iterator();
+        IDanmakuIterator it = mLiveDanmakus.iterator();
         while (it.hasNext()) {
             BaseDanmaku danmaku = it.next();
             boolean isTimeout = danmaku.isTimeOut();
-            if (isTimeout && danmaku.isLive) {
+            if (isTimeout) {
                 it.remove();
+                danmakuList.removeItem(danmaku);
                 onDanmakuRemoved(danmaku);
+            } else {
+                break;
             }
             if (!isTimeout || SystemClock.uptimeMillis() - startTime > msec) {
                 break;
@@ -232,6 +247,10 @@ public class DrawTask implements IDrawTask {
         mContext.mGlobalFlagValues.updateVisibleFlag();
         mContext.mGlobalFlagValues.updateFirstShownFlag();
         mStartRenderTime = mills < 1000 ? 0 : mills;
+        if (mRenderingState != null) {
+            mRenderingState.reset();
+            mRenderingState.endTime = mStartRenderTime;
+        }
     }
 
     @Override
@@ -306,8 +325,11 @@ public class DrawTask implements IDrawTask {
                 IDanmakus subDanmakus = danmakuList.sub(beginMills, endMills);
                 if(subDanmakus != null) {
                     danmakus = subDanmakus;
-                } else {
-                    danmakus.clear();
+                } else if (danmakus != null) {
+                    BaseDanmaku last = danmakus.last();
+                    if (last == null || last.isTimeOut()) {
+                        danmakus.clear();
+                    }
                 }
                 mLastBeginMills = beginMills;
                 mLastEndMills = endMills;

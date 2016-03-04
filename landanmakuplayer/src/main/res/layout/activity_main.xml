@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -7,23 +7,33 @@
     android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
-    tools:context=".MainActivity" >
+    tools:context=".MainActivity">
 
-    <VideoView
-        android:id="@+id/videoview"
+    <Button
+        android:id="@+id/refreshBtn"
+        android:text="refresh"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        />
+    <ListView
+        android:id="@+id/list"
         android:layout_width="fill_parent"
-        android:layout_height="fill_parent" />
-
-    <ImageView android:src="@drawable/ic_launcher" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-
-    <master.flame.danmaku.ui.widget.DanmakuView
-        android:id="@+id/sv_danmaku"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
-
-    <include android:id="@+id/media_controller"
-        android:layout_width="match_parent"
         android:layout_height="fill_parent"
-        layout="@layout/media_controller" />
+        android:layout_below="@id/refreshBtn">
+    </ListView>
+    <Button android:id="@+id/fileDialogBtn"
+        android:layout_alignParentBottom="true"
+        android:text="选择文件"
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
+        >
+    </Button>
+    <TextView
+        android:id="@+id/playText"
+        android:text="视频播放"
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
+        android:layout_above="@id/fileDialogBtn">
+    </TextView>
 
-</FrameLayout>
+</RelativeLayout>

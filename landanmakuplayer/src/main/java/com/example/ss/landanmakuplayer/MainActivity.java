@@ -1,354 +1,273 @@
 package com.example.ss.landanmakuplayer;
 
-import android.graphics.Color;
-import android.media.MediaPlayer;
+import android.content.Context;
+import android.content.Intent;
+import android.net.wifi.WifiManager;
 import android.os.Environment;
+import android.os.Looper;
+import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
-import android.content.pm.ActivityInfo;
-
 import android.os.Bundle;
-import android.text.Spannable;
-import android.text.Spanned;
-import android.text.style.BackgroundColorSpan;
-import android.text.style.ImageSpan;
-import android.view.Menu;
-import android.view.View;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.ImageButton;
-import android.widget.Switch;
-import android.widget.VideoView;
-import android.graphics.drawable.Drawable;
-import android.graphics.drawable.BitmapDrawable;
-import android.text.SpannableStringBuilder;
+import android.os.Handler;
+import android.text.format.Formatter;
 import android.util.Log;
+import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.ListView;
+import android.widget.Toast;
 
-import java.io.InputStream;
 import java.io.IOException;
-import java.net.URL;
-import java.net.URLConnection;
-import java.net.MalformedURLException;
-import java.util.HashMap;
-
-import master.flame.danmaku.controller.IDanmakuView;
-import master.flame.danmaku.danmaku.loader.ILoader;
-import master.flame.danmaku.danmaku.loader.IllegalDataException;
-import master.flame.danmaku.danmaku.loader.android.DanmakuLoaderFactory;
-import master.flame.danmaku.danmaku.model.BaseDanmaku;
-import master.flame.danmaku.danmaku.model.DanmakuTimer;
-import master.flame.danmaku.danmaku.model.IDisplayer;
-import master.flame.danmaku.danmaku.model.android.BaseCacheStuffer;
-import master.flame.danmaku.danmaku.model.android.DanmakuContext;
-import master.flame.danmaku.danmaku.model.android.Danmakus;
-import master.flame.danmaku.danmaku.model.android.SpannedCacheStuffer;
-import master.flame.danmaku.danmaku.parser.IDataSource;
-import master.flame.danmaku.danmaku.parser.android.BiliDanmukuParser;
-import master.flame.danmaku.danmaku.util.IOUtils;
-import master.flame.danmaku.danmaku.model.IDanmakus;
-import master.flame.danmaku.danmaku.parser.BaseDanmakuParser;
+import java.net.DatagramPacket;
+import java.net.InetAddress;
+import java.net.MulticastSocket;
+import java.net.SocketException;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.Set;
+import java.util.TreeSet;
 
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener {
-    private IDanmakuView mDanmakuView;
-    private DanmakuContext mContext;
-    private BaseDanmakuParser mParser;
 
-    private View mMediaController;
-    private VideoView mVideoView;
+public class MainActivity extends AppCompatActivity {
+    public static final String VIDEO_FILE="videofile";
+    public static final String SOURCE_TYPE="sourcetype";
+    public static final String VIDEO_URL= "videourl";
+    public static final int LOCAL_VIDEO = 0;
+    public static final int REMOTE_URL = 1;
+    private ListView listView;
+    private Set<String> setItems = new TreeSet<>();
+    private ArrayList<String> listItems = new ArrayList<String>();
+    private ArrayAdapter<String> adapter;
+    private Button refreshBtn;
+    private Button fileDialogBtn;
+    private SenderThread sender;
+    private ReceiverThread receiver;
 
-//    private Button mBtnHideDanmaku;
-//    private Button mBtnShowDanmaku;
-    private Switch mSwitch_hs;
-//    private Button mBtnPauseDanmaku;
-    private ImageButton mBtnPauseOrResume;
-    private Button mBtnResumeDanmaku;
-    private ImageButton mBtnSendDanmaku;
-//    private ImageButton mBtnRotate;
-    private EditText mInputText;
+    private static final String TAG = "VideoPlayerActivity";
+    private static final int MULTICAST_PORT = 5100;
+    private static final String GROUP_ID = "224.5.9.7";
 
-    private BaseCacheStuffer.Proxy mCacheStufferAdapter = new BaseCacheStuffer.Proxy(){
-        private Drawable mDrawable;
+    WifiManager.MulticastLock multicastLock;
 
-        @Override
-        public void prepareDrawing(final BaseDanmaku danmaku, boolean fromWorkerThread){
-            if(danmaku.text instanceof Spanned){
-                // 根据你的条件检查是否需要需要更新弹幕
-                // FIXME 这里只是简单启个线程来加载远程url图片，请使用你自己的异步线程池，最好加上你的缓存池
-                new Thread() {
-                    @Override
-                    public void run() {
-                        String url = "http://www.bilibili.com/favicon.ico";
-                        InputStream inputStream = null;
-                        Drawable drawable = mDrawable;
-                        if(drawable == null) {
-                            try {
-                                URLConnection urlConnection = new URL(url).openConnection();
-                                inputStream = urlConnection.getInputStream();
-                                drawable = BitmapDrawable.createFromStream(inputStream, "bitmap");
-                                mDrawable = drawable;
-                            } catch (MalformedURLException e) {
-                                e.printStackTrace();
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            } finally {
-                                IOUtils.closeQuietly(inputStream);
-                            }
-                        }
-                        if (drawable != null) {
-                            drawable.setBounds(0, 0, 100, 100);
-                            SpannableStringBuilder spannable = createSpannable(drawable);
-                            danmaku.text = spannable;
-                            if(mDanmakuView != null) {
-                                mDanmakuView.invalidateDanmaku(danmaku, false);
-                            }
-                            return;
-                        }
-                    }
-                }.start();
-            }
-        }
-        @Override
-        public void releaseResource(BaseDanmaku danmaku) {
-            // TODO 重要:清理含有ImageSpan的text中的一些占用内存的资源 例如drawable
-        }
-    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
-        findViews();
-    }
+        listView = (ListView)this.findViewById(R.id.list);
+        refreshBtn = (Button)this.findViewById(R.id.refreshBtn);
+        fileDialogBtn = (Button)this.findViewById(R.id.fileDialogBtn);
+        adapter = new ArrayAdapter<String>(this,
+                android.R.layout.simple_list_item_1,
+                listItems);
+        listView.setAdapter(adapter);
 
-    private void findViews(){
-        mMediaController = findViewById(R.id.media_controller);
-        mVideoView = (VideoView) findViewById(R.id.videoview);
-
-//        mBtnRotate = (ImageButton) findViewById(R.id.rotate);
-//        mBtnHideDanmaku = (Button) findViewById(R.id.btn_hide);
-//        mBtnShowDanmaku = (Button) findViewById(R.id.btn_show);
-        mSwitch_hs = (Switch) findViewById(R.id.switch_hs);
-//        mBtnPauseDanmaku = (Button) findViewById(R.id.btn_pause);
-//        mBtnResumeDanmaku = (Button) findViewById(R.id.btn_resume);
-        mBtnPauseOrResume = (ImageButton)findViewById(R.id.btn_pr);
-        mBtnSendDanmaku = (ImageButton) findViewById(R.id.btn_send);
-
-        mInputText = (EditText) findViewById(R.id.danmuku_input);
-
-//        mBtnRotate.setOnClickListener(this);
-//        mBtnHideDanmaku.setOnClickListener(this);
-        mMediaController.setOnClickListener(this);
-//        mBtnShowDanmaku.setOnClickListener(this);
-        mSwitch_hs.setOnClickListener(this);
-//        mBtnPauseDanmaku.setOnClickListener(this);
-//        mBtnResumeDanmaku.setOnClickListener(this);
-        mBtnPauseOrResume.setOnClickListener(this);
-        mBtnSendDanmaku.setOnClickListener(this);
-
-        mDanmakuView = (IDanmakuView) findViewById(R.id.sv_danmaku);
-        mContext = DanmakuContext.create();
-        // 设置最大显示行数
-        HashMap<Integer, Integer> maxLinesPair = new HashMap<Integer,Integer>();
-        maxLinesPair.put(BaseDanmaku.TYPE_SCROLL_RL, 5); // 滚动弹幕最大显示5行
-        // 设置是否禁止重叠
-        HashMap<Integer, Boolean> overlappingEnablePair = new HashMap<Integer, Boolean>();
-        overlappingEnablePair.put(BaseDanmaku.TYPE_SCROLL_RL, true);
-        overlappingEnablePair.put(BaseDanmaku.TYPE_FIX_TOP, true);
-
-        mContext.setDanmakuStyle(IDisplayer.DANMAKU_STYLE_STROKEN,3)
-                .setDuplicateMergingEnabled(false)
-                .setScrollSpeedFactor(1.2f)
-                .setScaleTextSize(1.2f)
-                .setCacheStuffer(new SpannedCacheStuffer(), mCacheStufferAdapter)
-                .setMaximumLines(maxLinesPair)
-                .preventOverlapping(overlappingEnablePair);
-
-        if(mDanmakuView != null){
-            mParser = createParser(null);
-            mDanmakuView.setCallback(new master.flame.danmaku.controller.DrawHandler.Callback() {
-                @Override
-                public void updateTimer(DanmakuTimer timer) {
-
+        sender = new SenderThread();
+        receiver = new ReceiverThread();
+        sender.start();
+        receiver.start();
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                String item = (String)listView.getItemAtPosition(position);
+                Log.d("click item", item);
+                if(item.contains("playing"))
+                {
+                    String ip = item.split(":")[0];
+                    String play_url = "http:/"+ip+":8089";
+                    Intent i = new Intent(MainActivity.this, VideoPlayerActivity.class);
+                    i.putExtra(SOURCE_TYPE, REMOTE_URL);
+                    i.putExtra(VIDEO_URL, play_url);
+                    startActivity(i);
                 }
-
-                @Override
-                public void drawingFinished() {
-
-                }
-
-                @Override
-                public void danmakuShown(BaseDanmaku danmaku) {
-//                    Log.d("DFM", "danmakuShown(): text=" + danmaku.text);
-                }
-
-                @Override
-                public void prepared() {
-                    mDanmakuView.start();
-                }
-            });
-            mDanmakuView.setOnDanmakuClickListener(new IDanmakuView.OnDanmakuClickListener() {
-                @Override
-                public void onDanmakuClick(BaseDanmaku latest) {
-                    Log.d("DFM", "onDanmakuClick text:" + latest.text);
-                }
-
-                @Override
-                public void onDanmakuClick(IDanmakus danmakus) {
-                    Log.d("DFM", "onDanmakuClick danmakus size:" + danmakus.size());
-                }
-            });
-            mDanmakuView.prepare(mParser, mContext);
-            mDanmakuView.showFPS(true);
-            mDanmakuView.enableDanmakuDrawingCache(true);
-            // 点击显示控制栏
-            ((View) mDanmakuView).setOnClickListener(new View.OnClickListener(){
-
-                @Override
-                public void onClick(View view) {
-                    mMediaController.setVisibility(View.VISIBLE);
-                }
-            });
-        }
-        if(mVideoView != null){
-            mVideoView.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
-                @Override
-                public void onPrepared(MediaPlayer mp) {
-                    mp.start();
-                }
-            });
-            mVideoView.setVideoPath(Environment.getExternalStorageDirectory() + "/Test.3gp");
-        }
-    }
-
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        if (mDanmakuView != null && mDanmakuView.isPrepared()) {
-            mDanmakuView.pause();
-        }
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        if (mDanmakuView != null && mDanmakuView.isPrepared() && mDanmakuView.isPaused()) {
-            mDanmakuView.resume();
-        }
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        if (mDanmakuView != null) {
-            // dont forget release!
-            mDanmakuView.release();
-            mDanmakuView = null;
-        }
-    }
-
-    @Override
-    public void onBackPressed() {
-        super.onBackPressed();
-        if (mDanmakuView != null) {
-            // dont forget release!
-            mDanmakuView.release();
-            mDanmakuView = null;
-        }
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.main, menu);
-        return true;
-    }
-
-    @Override
-    public void onClick(View v) {
-        if(v == mMediaController){
-            mMediaController.setVisibility(View.GONE);
-        }
-        if (mDanmakuView == null || !mDanmakuView.isPrepared())
-            return;
-//        if (v == mBtnRotate) {
-//            setRequestedOrientation(getRequestedOrientation() == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE ? ActivityInfo.SCREEN_ORIENTATION_PORTRAIT : ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
-//        }
-        else if (v == mSwitch_hs) {
-            if(mDanmakuView.isShown())
-                mDanmakuView.hide();
-            // mPausedPosition = mDanmakuView.hideAndPauseDrawTask();
-            else
-                mDanmakuView.show();
-            // mDanmakuView.showAndResumeDrawTask(mPausedPosition); // sync to the video time in your practice
-        } else if (v == mBtnPauseOrResume) {
-            if(mDanmakuView.isPaused()) {
-                mDanmakuView.resume();
-                mBtnPauseOrResume.setBackgroundResource(
-                        android.R.drawable.ic_media_pause);
             }
-            else{
-                mDanmakuView.pause();
-                mBtnPauseOrResume.setBackgroundResource(
-                        android.R.drawable.ic_media_play
+        });
+        refreshBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Message msg = new Message();
+                msg.what = 0;
+                msg.obj = "";
+                sender.senderHandler.sendMessage(msg);
+            }
+        });
+        fileDialogBtn.setOnClickListener(new View.OnClickListener(){
+
+            @Override
+            public void onClick(View v) {
+                SimpleFileDialog fileOpenDialog =  new SimpleFileDialog(
+                        MainActivity.this,
+                        "FileOpen..",
+                        new SimpleFileDialog.SimpleFileDialogListener()
+                        {
+                            @Override
+                            public void onChosenDir(String chosenDir)
+                            {
+                                if(!chosenDir.endsWith(".mp4")){
+                                    Toast.makeText(MainActivity.this, "选择视频文件",  Toast.LENGTH_SHORT).show();
+                                }
+                                else {
+                                    Message msg = new Message();
+                                    // send what is playing to other clients
+                                    msg.what = 1;
+                                    msg.obj = "playing";
+                                    sender.senderHandler.sendMessage(msg);
+
+
+                                    Intent intent = new Intent(MainActivity.this, VideoPlayerActivity.class);
+                                    intent.putExtra(VIDEO_FILE, chosenDir);
+                                    intent.putExtra(SOURCE_TYPE, LOCAL_VIDEO);
+                                    startActivity(intent);
+                                }
+                                // The code in this function will be executed when the dialog OK button is pushed
+//                                editFile.setText(chosenDir);
+                            }
+                        }
                 );
+                //You can change the default filename using the public variable "Default_File_Name"
+                fileOpenDialog.default_file_name = Environment.getExternalStorageDirectory().toString();
+                fileOpenDialog.chooseFile_or_Dir(fileOpenDialog.default_file_name);
             }
+        });
 
-        }
-        else if(v==mBtnSendDanmaku){
-            BaseDanmaku danmaku = mContext.mDanmakuFactory.createDanmaku(BaseDanmaku.TYPE_SCROLL_RL);
-            if (danmaku == null || mDanmakuView == null) {
-                return;
-            }
-            danmaku.text = mInputText.getText().toString();
-            danmaku.padding = 5;
-            danmaku.priority = 1;
-            danmaku.isLive = true;
-            danmaku.time = mDanmakuView.getCurrentTime() + 1200;
-            danmaku.textSize = 25f * (mParser.getDisplayer().getDensity() - 0.6f);
-            danmaku.textColor = Color.RED;
-            danmaku.textShadowColor = Color.WHITE;
-            // danmaku.underlineColor = Color.GREEN;
-            danmaku.borderColor = Color.GREEN;
-            mDanmakuView.addDanmaku(danmaku);
-            // 视频继续播放
-            if(!mVideoView.isPlaying()) {
-                mVideoView.start();
-            }
-            mInputText.setText("");
-        }
     }
 
-    private SpannableStringBuilder createSpannable(Drawable drawable) {
-        String text = "bitmap";
-        SpannableStringBuilder spannableStringBuilder = new SpannableStringBuilder(text);
-        ImageSpan span = new ImageSpan(drawable);
-        spannableStringBuilder.setSpan(span, 0, text.length(), Spannable.SPAN_INCLUSIVE_EXCLUSIVE);
-        spannableStringBuilder.append("图文混排");
-        spannableStringBuilder.setSpan(new BackgroundColorSpan(Color.parseColor("#8A2233B1")), 0, spannableStringBuilder.length(), Spannable.SPAN_INCLUSIVE_INCLUSIVE);
-        return spannableStringBuilder;
-    }
+    private Handler myMainHandler = new Handler(){
+        public void handleMessage(Message msg){
+           //
+            if(msg.what == 0){
+                String msgstr = (String)msg.obj;
+                addItem(msgstr);
+            }
+        }
+        private void addItem(String msgstr){
+            setItems.add(msgstr);
+            listItems.clear();
+            listItems.addAll(setItems);
+            adapter.notifyDataSetChanged();
+        }
+    };
 
-    private BaseDanmakuParser createParser(InputStream stream) {
-        if (stream == null) {
-            return new BaseDanmakuParser() {
-                @Override
-                protected Danmakus parse() {
-                    return new Danmakus();
+    private class SenderThread extends Thread{
+        public Handler senderHandler;
+        private MulticastSocket multicastSocket;
+        private String ip;
+        private InetAddress group;
+        private void send(String content) {
+            // send my own ip
+            byte[] sendData = content.getBytes();
+            DatagramPacket packet =
+                    new DatagramPacket(sendData, sendData.length, group, MULTICAST_PORT);
+            try {
+                multicastSocket.send(packet);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        public void run(){
+            Looper.prepare();
+            senderHandler = new Handler(){
+                public void handleMessage(Message msg) {
+                    if(msg.what == 0){
+                        if(multicastSocket!=null){
+                            send((String)msg.obj);
+                        }
+                    }
+                    // one client is playing video
+                    if(msg.what == 1){
+                        if(multicastSocket!=null)
+                            send((String)msg.obj);
+                    }
                 }
             };
+            try{
+                WifiManager wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
+                if(wifiManager != null) {
+                    multicastLock = wifiManager.createMulticastLock("multicast.test");
+                    multicastLock.acquire();
+                }
+                multicastSocket = new MulticastSocket(MULTICAST_PORT);
+                try {
+                    multicastSocket.setLoopbackMode(true);
+                } catch (SocketException e) {
+                    e.printStackTrace();
+                }
+                try {
+                    group = InetAddress.getByName(GROUP_ID);
+                } catch (UnknownHostException e) {
+                    e.printStackTrace();
+                }
+                multicastSocket.joinGroup(group);
+                ip = Formatter.formatIpAddress(wifiManager.getConnectionInfo().getIpAddress());
+                send("");
+            }catch(IOException e){
+                e.printStackTrace();
+            }
+            Looper.loop();
         }
-
-        ILoader loader = DanmakuLoaderFactory.create(DanmakuLoaderFactory.TAG_BILI);
-
-        try {
-            loader.load(stream);
-        } catch (IllegalDataException e) {
-            e.printStackTrace();
-        }
-        BaseDanmakuParser parser = new BiliDanmukuParser();
-        IDataSource<?> dataSource = loader.getDataSource();
-        parser.load(dataSource);
-        return parser;
     }
+    private class ReceiverThread extends Thread{
+        public Handler receiverHandler;
+        public void run() {
+            Looper.prepare();
+            receiverHandler = new Handler() {
+                public void handleMessage(Message msg) {
+                    if (msg.what == 0) {
 
+                    }
+                }
+            };
+            try {
+                WifiManager wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
+                if (wifiManager != null) {
+                    multicastLock = wifiManager.createMulticastLock("multicast.test");
+                    multicastLock.acquire();
+                }
+                String content = null;
+
+                MulticastSocket multicastSocket = null;
+                multicastSocket = new MulticastSocket(MULTICAST_PORT);
+                try {
+                    multicastSocket.setLoopbackMode(true);
+                } catch (SocketException e) {
+                    e.printStackTrace();
+                }
+                InetAddress group = null;
+                try {
+                    group = InetAddress.getByName(GROUP_ID);
+                } catch (UnknownHostException e) {
+                    e.printStackTrace();
+                }
+                multicastSocket.joinGroup(group);
+                byte[] receiveData = new byte[1024];
+                DatagramPacket recv = new DatagramPacket(receiveData, receiveData.length);
+                while (true) {
+                    multicastSocket.receive(recv);
+                    Log.d(TAG, "receive from" + recv.getAddress());
+                    recv.setLength(receiveData.length);
+//                    multicastSocket.leaveGroup(group);
+                    StringBuilder packetContent = new StringBuilder();
+                    for (int i = 0; i < receiveData.length; i++) {
+                        if (receiveData[i] == 0)
+                            break;
+                        packetContent.append((char) receiveData[i]);
+                    }
+                    content = packetContent.toString();
+                    Log.d(TAG, "packet content is:" + content);
+                    // call main Thread to render
+                    Message msg = new Message();
+                    msg.what = 0;
+                    String str = recv.getAddress() + ":" + content;
+                    msg.obj = str;
+                    myMainHandler.sendMessage(msg);
+                }
+//                multicastLock.release();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            Looper.loop();
+        }
+    }
 }

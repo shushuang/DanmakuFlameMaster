@@ -25,7 +25,11 @@ import java.net.MulticastSocket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 
 
@@ -36,7 +40,9 @@ public class MainActivity extends AppCompatActivity {
     public static final String VIDEO_URL= "videourl";
     public static final int LOCAL_VIDEO = 0;
     public static final int REMOTE_URL = 1;
+    private String state = "Online";
     private ListView listView;
+    private Map<String, String> peersMap = new TreeMap<String, String>();
     private Set<String> setItems = new TreeSet<>();
     private ArrayList<String> listItems = new ArrayList<String>();
     private ArrayAdapter<String> adapter;
@@ -45,12 +51,11 @@ public class MainActivity extends AppCompatActivity {
     private SenderThread sender;
     private ReceiverThread receiver;
 
-    private static final String TAG = "VideoPlayerActivity";
+    private static final String TAG = "MainActivity";
     private static final int MULTICAST_PORT = 5100;
     private static final String GROUP_ID = "224.5.9.7";
 
     WifiManager.MulticastLock multicastLock;
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -73,7 +78,7 @@ public class MainActivity extends AppCompatActivity {
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 String item = (String)listView.getItemAtPosition(position);
                 Log.d("click item", item);
-                if(item.contains("playing"))
+                if(item.contains("Playing"))
                 {
                     String ip = item.split(":")[0];
                     String play_url = "http:/"+ip+":8089";
@@ -89,7 +94,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 Message msg = new Message();
                 msg.what = 0;
-                msg.obj = "";
+                msg.obj = state;
                 sender.senderHandler.sendMessage(msg);
             }
         });
@@ -106,16 +111,15 @@ public class MainActivity extends AppCompatActivity {
                             public void onChosenDir(String chosenDir)
                             {
                                 if(!chosenDir.endsWith(".mp4")){
-                                    Toast.makeText(MainActivity.this, "选择视频文件",  Toast.LENGTH_SHORT).show();
+                                    Toast.makeText(MainActivity.this, "视频格式错误, 请选择视频文件",  Toast.LENGTH_SHORT).show();
                                 }
                                 else {
                                     Message msg = new Message();
                                     // send what is playing to other clients
+                                    state = "Playing";
                                     msg.what = 1;
-                                    msg.obj = "playing";
+                                    msg.obj = "Playing";
                                     sender.senderHandler.sendMessage(msg);
-
-
                                     Intent intent = new Intent(MainActivity.this, VideoPlayerActivity.class);
                                     intent.putExtra(VIDEO_FILE, chosenDir);
                                     intent.putExtra(SOURCE_TYPE, LOCAL_VIDEO);
@@ -134,18 +138,36 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        state = "Online";
+    }
+
     private Handler myMainHandler = new Handler(){
         public void handleMessage(Message msg){
            //
             if(msg.what == 0){
                 String msgstr = (String)msg.obj;
                 addItem(msgstr);
+                // now call the senderThread to send my own state
+                Message message = new Message();
+                message.what = 0;
+                message.obj = state;
+                sender.senderHandler.sendMessage(message);
             }
         }
         private void addItem(String msgstr){
-            setItems.add(msgstr);
+            String[] values = msgstr.split(":");
+            String key = values[0];
+            String val = values[1];
+            peersMap.put(key, val);
             listItems.clear();
-            listItems.addAll(setItems);
+            for(Map.Entry<String, String> entry:peersMap.entrySet())
+            {
+                listItems.add(entry.getKey() + ":" + entry.getValue());
+            }
+
             adapter.notifyDataSetChanged();
         }
     };
@@ -201,7 +223,7 @@ public class MainActivity extends AppCompatActivity {
                 }
                 multicastSocket.joinGroup(group);
                 ip = Formatter.formatIpAddress(wifiManager.getConnectionInfo().getIpAddress());
-                send("");
+                send(state);
             }catch(IOException e){
                 e.printStackTrace();
             }
@@ -255,6 +277,7 @@ public class MainActivity extends AppCompatActivity {
                         packetContent.append((char) receiveData[i]);
                     }
                     content = packetContent.toString();
+                    Arrays.fill(receiveData, (byte) 0);
                     Log.d(TAG, "packet content is:" + content);
                     // call main Thread to render
                     Message msg = new Message();

@@ -18,21 +18,19 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.AppCompat.Dark.NoActionBar.FullScreen">
         <activity android:name=".VideoPlayerActivity"
-            android:label="MainActivity">
-
+            android:label="VideoPlayerActivity"
+            android:theme="@style/Theme.AppCompat.Dark.NoActionBar.FullScreen">
         </activity>
-
         <service
             android:name=".VidServerService"
             android:enabled="true"
             android:exported="true" />
-
         <activity
             android:name=".MainActivity"
-            android:label="@string/title_activity_main2">
+            android:label="一起来看"
+            android:theme="@style/AppTheme">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>

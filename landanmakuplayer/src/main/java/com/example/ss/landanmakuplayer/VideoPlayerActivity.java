@@ -24,7 +24,6 @@ import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.RadioGroup;
 import android.widget.Switch;
-import android.widget.Toast;
 import android.widget.ToggleButton;
 import android.widget.VideoView;
 import android.graphics.drawable.Drawable;
@@ -77,7 +76,7 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
     private BaseDanmakuParser mParser;
     private ServerSocketChannel serverSocketChannel;
     private String mVideoName;
-    private String mVidAdress;
+    private String mVidAddress;
     private String mServerIp;
     private Boolean mIamServer;
 
@@ -190,7 +189,7 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_vp);
         Context context = getApplicationContext();
-        mVidAdress = "http://127.0.0.1:8089";
+        mVidAddress = "http://127.0.0.1:8089";
         Intent inputIntent = getIntent();
         if (inputIntent.getIntExtra(MainActivity.SOURCE_TYPE, MainActivity.LOCAL_VIDEO)
                 == MainActivity.LOCAL_VIDEO) {
@@ -203,9 +202,9 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
             Log.w("Httpd", "Web server initialized.");
             mIamServer = true;
         } else {
-            mVidAdress = inputIntent.getStringExtra(MainActivity.VIDEO_URL);
+            mVidAddress = inputIntent.getStringExtra(MainActivity.VIDEO_URL);
             mIamServer = false;
-            mServerIp = mVidAdress.split(":")[1].substring(2);
+//            mServerIp = mVidAddress.split(":")[1].substring(2);
         }
         senderThread = new SenderThread();
         receiverThread = new ReceiverThread();
@@ -319,7 +318,7 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
                 mVideoView.setVideoPath(mVideoName);
             }
             else{
-                Uri vidUri = Uri.parse(mVidAdress);
+                Uri vidUri = Uri.parse(mVidAddress);
                 mVideoView.setVideoURI(vidUri);
             }
 //            mVideoView.setVideoPath(Environment.getExternalStorageDirectory()+"/Test1.mp4");

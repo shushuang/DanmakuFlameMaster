@@ -15,6 +15,7 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Toast;
 
@@ -48,6 +49,9 @@ public class MainActivity extends AppCompatActivity {
     private ArrayAdapter<String> adapter;
     private Button refreshBtn;
     private Button fileDialogBtn;
+    private EditText mNetStreamEdit;
+    private Button mNetStreamBtn;
+
     private SenderThread sender;
     private ReceiverThread receiver;
 
@@ -64,6 +68,8 @@ public class MainActivity extends AppCompatActivity {
         listView = (ListView)this.findViewById(R.id.list);
         refreshBtn = (Button)this.findViewById(R.id.refreshBtn);
         fileDialogBtn = (Button)this.findViewById(R.id.fileDialogBtn);
+        mNetStreamEdit = (EditText)this.findViewById(R.id.edit_netstream);
+        mNetStreamBtn = (Button)this.findViewById(R.id.btn_netstream);
         adapter = new ArrayAdapter<String>(this,
                 android.R.layout.simple_list_item_1,
                 listItems);
@@ -76,12 +82,11 @@ public class MainActivity extends AppCompatActivity {
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                String item = (String)listView.getItemAtPosition(position);
+                String item = (String) listView.getItemAtPosition(position);
                 Log.d("click item", item);
-                if(item.contains("Playing"))
-                {
+                if (item.contains("Playing")) {
                     String ip = item.split(":")[0];
-                    String play_url = "http:/"+ip+":8089";
+                    String play_url = "http:/" + ip + ":8089";
                     Intent i = new Intent(MainActivity.this, VideoPlayerActivity.class);
                     i.putExtra(SOURCE_TYPE, REMOTE_URL);
                     i.putExtra(VIDEO_URL, play_url);
@@ -96,6 +101,23 @@ public class MainActivity extends AppCompatActivity {
                 msg.what = 0;
                 msg.obj = state;
                 sender.senderHandler.sendMessage(msg);
+            }
+        });
+        mNetStreamBtn.setOnClickListener(new View.OnClickListener(){
+
+            @Override
+            public void onClick(View v) {
+                Message msg = new Message();
+                // send what is playing to other clients
+                state = "Playing";
+                msg.what = 1;
+                msg.obj = "Playing";
+                sender.senderHandler.sendMessage(msg);
+                Intent intent = new Intent(MainActivity.this, VideoPlayerActivity.class);
+                String url = mNetStreamEdit.getText().toString();
+                intent.putExtra(VIDEO_URL, url);
+                intent.putExtra(SOURCE_TYPE, REMOTE_URL);
+                startActivity(intent);
             }
         });
         fileDialogBtn.setOnClickListener(new View.OnClickListener(){

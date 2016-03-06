@@ -7,6 +7,8 @@
     android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
+    android:focusable="true"
+    android:focusableInTouchMode="true"
     tools:context=".MainActivity">
 
     <Button
@@ -21,19 +23,44 @@
         android:layout_height="fill_parent"
         android:layout_below="@id/refreshBtn">
     </ListView>
-    <Button android:id="@+id/fileDialogBtn"
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
         android:layout_alignParentBottom="true"
-        android:text="选择文件"
-        android:layout_height="wrap_content"
-        android:layout_width="wrap_content"
         >
-    </Button>
-    <TextView
-        android:id="@+id/playText"
-        android:text="视频播放"
-        android:layout_height="wrap_content"
-        android:layout_width="wrap_content"
-        android:layout_above="@id/fileDialogBtn">
-    </TextView>
+        <TextView
+            android:id="@+id/playText"
+            android:text="视频播放"
+            android:layout_height="wrap_content"
+            android:layout_width="wrap_content"
+            >
+        </TextView>
+        <Button android:id="@+id/fileDialogBtn"
+            android:text="选择文件"
+            android:layout_height="wrap_content"
+            android:layout_width="wrap_content"
+            >
+        </Button>
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <EditText
+                android:id="@+id/edit_netstream"
+                android:layout_width="100dp"
+                android:layout_weight="2"
+                android:layout_height="wrap_content"
+                />
+            <Button
+                android:id="@+id/btn_netstream"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="网络视频流"/>
+        </LinearLayout>
+    </LinearLayout>
+
 
 </RelativeLayout>

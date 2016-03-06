@@ -2,8 +2,116 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent" >
-
-
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_gravity="top"
+        android:layout_height="wrap_content">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="60dip"
+            android:layout_gravity="top"
+            android:background="#00ffffff" >
+            <!--#8a006161-->
+            <EditText
+                android:id="@+id/danmuku_input"
+                android:layout_weight="9"
+                android:layout_width="0dp"
+                android:singleLine="true"
+                android:layout_height="wrap_content"
+                android:imeOptions="flagNoExtractUi"/>
+            <ImageButton
+                android:id="@+id/btn_send"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:layout_marginLeft="20dp"
+                android:layout_marginRight="20dp"
+                android:background="@android:drawable/ic_menu_send" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:orientation="horizontal"
+            android:background="#00ffffff">
+            <RadioGroup
+                android:id="@+id/group_danmaku_type"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="left"
+                android:orientation="horizontal">
+                <ToggleButton android:id="@+id/btn_FT"
+                    android:layout_height="wrap_content"
+                    android:layout_width="wrap_content"
+                    android:textSize="14sp"
+                    android:textOn="顶部"
+                    android:textOff="顶部"
+                    android:onClick="onToggle"
+                    android:checked="true"
+                    />
+                <ToggleButton android:id="@+id/btn_FB"
+                    android:layout_height="wrap_content"
+                    android:layout_width="wrap_content"
+                    android:textSize="14sp"
+                    android:onClick="onToggle"
+                    android:textOn="底部"
+                    android:textOff="底部"
+                    />
+                <ToggleButton android:id="@+id/btn_RToL"
+                    android:layout_height="wrap_content"
+                    android:layout_width="wrap_content"
+                    android:textSize="14sp"
+                    android:onClick="onToggle"
+                    android:textOn="从右往左"
+                    android:textOff="从右往左"
+                    />
+                <ToggleButton android:id="@+id/btn_LToR"
+                    android:layout_height="wrap_content"
+                    android:layout_width="wrap_content"
+                    android:textSize="14sp"
+                    android:onClick="onToggle"
+                    android:textOn="从左往右"
+                    android:textOff="从左往右"
+                    />
+            </RadioGroup>
+            <RadioGroup
+                android:id="@+id/group_danmaku_color"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:orientation="horizontal">
+                <ToggleButton android:id="@+id/btn_red"
+                    android:layout_height="wrap_content"
+                    android:layout_width="wrap_content"
+                    android:onClick="onToggle"
+                    android:textColor="@android:color/holo_red_dark"
+                    android:textSize="14sp"
+                    android:textOn="红"
+                    android:textOff="红"
+                    android:checked="true"
+                    />
+                <ToggleButton android:id="@+id/btn_green"
+                    android:layout_height="wrap_content"
+                    android:layout_width="wrap_content"
+                    android:onClick="onToggle"
+                    android:textColor="@android:color/holo_green_dark"
+                    android:textSize="14sp"
+                    android:textOn="绿"
+                    android:textOff="绿"
+                    />
+                <ToggleButton android:id="@+id/btn_yellow"
+                    android:layout_height="wrap_content"
+                    android:layout_width="wrap_content"
+                    android:onClick="onToggle"
+                    android:textColor="@android:color/holo_orange_dark"
+                    android:textSize="14sp"
+                    android:textOn="橘"
+                    android:textOff="橘"
+                    />
+            </RadioGroup>
+        </LinearLayout>
+    </LinearLayout>
 
     <LinearLayout
         android:gravity="right"
@@ -53,27 +161,6 @@
 
     </LinearLayout>
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="60dip"
-        android:layout_gravity="top"
-        android:background="#00ffffff" >
-        <!--#8a006161-->
-        <EditText
-            android:id="@+id/danmuku_input"
-            android:layout_weight="9"
-            android:layout_width="0dp"
-            android:singleLine="true"
-            android:layout_height="wrap_content"
-            android:imeOptions="flagNoExtractUi"/>
-        <ImageButton
-            android:id="@+id/btn_send"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_vertical"
-            android:layout_marginLeft="20dp"
-            android:layout_marginRight="20dp"
-            android:background="@android:drawable/ic_menu_send" />
-    </LinearLayout>
+
 
 </FrameLayout>

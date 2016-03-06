@@ -22,8 +22,10 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.RadioGroup;
 import android.widget.Switch;
 import android.widget.Toast;
+import android.widget.ToggleButton;
 import android.widget.VideoView;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.BitmapDrawable;
@@ -46,6 +48,10 @@ import java.util.Arrays;
 import java.util.HashMap;
 
 import android.os.Handler;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import master.flame.danmaku.controller.DrawHandler;
 import master.flame.danmaku.controller.IDanmakuView;
 import master.flame.danmaku.danmaku.loader.ILoader;
@@ -88,8 +94,11 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
     private ImageButton mBtnPauseOrResume;
     private Button mBtnResumeDanmaku;
     private ImageButton mBtnSendDanmaku;
+    private RadioGroup mGroupDanmakuType;
+    private RadioGroup mGroupDanmakuColor;
     //    private ImageButton mBtnRotate;
     private EditText mInputText;
+
     private SenderThread senderThread;
     private ReceiverThread receiverThread;
 
@@ -97,12 +106,35 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
     private Handler mainHandler = new Handler() {
         public void handleMessage(Message msg) {
             if (msg.what == 0) {
-                String content = (String) msg.obj;
-                Log.d("mainThread", content);
-                addNewDanmaku(content);
+                JSONObject jsonObject = null;
+                try {
+                    jsonObject = new JSONObject((String)msg.obj);
+                    Log.d("mainThread", jsonObject.getString("content"));
+                    addNewDanmaku(jsonObject.getString("content"),
+                            jsonObject.getInt("color"),
+                            jsonObject.getInt("danmaku_type"),
+                            false);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+
             }
         }
     };
+
+    static final RadioGroup.OnCheckedChangeListener ToggleListener = new RadioGroup.OnCheckedChangeListener() {
+        @Override
+        public void onCheckedChanged(final RadioGroup radioGroup, final int i) {
+            for (int j = 0; j < radioGroup.getChildCount(); j++) {
+                final ToggleButton view = (ToggleButton) radioGroup.getChildAt(j);
+                view.setChecked(view.getId() == i);
+            }
+        }
+    };
+
+    public void onToggle(View view){
+        ((RadioGroup)view.getParent()).check(view.getId());
+    }
 
     private BaseCacheStuffer.Proxy mCacheStufferAdapter = new BaseCacheStuffer.Proxy() {
         private Drawable mDrawable;
@@ -186,6 +218,10 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
     private void findViews() {
         mMediaController = findViewById(R.id.media_controller);
         mVideoView = (VideoView) findViewById(R.id.videoview);
+        mGroupDanmakuType = (RadioGroup) findViewById(R.id.group_danmaku_type);
+        mGroupDanmakuColor = (RadioGroup) findViewById(R.id.group_danmaku_color);
+        mGroupDanmakuType.setOnCheckedChangeListener(ToggleListener);
+        mGroupDanmakuColor.setOnCheckedChangeListener(ToggleListener);
 
 //        mBtnRotate = (ImageButton) findViewById(R.id.rotate);
 //        mBtnHideDanmaku = (Button) findViewById(R.id.btn_hide);
@@ -279,8 +315,13 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
                     mp.start();
                 }
             });
-            Uri vidUri = Uri.parse(mVidAdress);
-            mVideoView.setVideoURI(vidUri);
+            if(mIamServer){
+                mVideoView.setVideoPath(mVideoName);
+            }
+            else{
+                Uri vidUri = Uri.parse(mVidAdress);
+                mVideoView.setVideoURI(vidUri);
+            }
 //            mVideoView.setVideoPath(Environment.getExternalStorageDirectory()+"/Test1.mp4");
         }
     }
@@ -369,21 +410,25 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
             }
 
         } else if (v == mBtnSendDanmaku) {
-            BaseDanmaku danmaku = mContext.mDanmakuFactory.createDanmaku(BaseDanmaku.TYPE_SCROLL_RL);
-            if (danmaku == null || mDanmakuView == null) {
-                return;
+            int  danmakuType = BaseDanmaku.TYPE_FIX_TOP;
+            if(mGroupDanmakuType.getCheckedRadioButtonId() == R.id.btn_FB){
+                danmakuType = BaseDanmaku.TYPE_FIX_BOTTOM;
+            }else if(mGroupDanmakuType.getCheckedRadioButtonId() == R.id.btn_FT){
+                danmakuType = BaseDanmaku.TYPE_FIX_TOP;
+            }else if(mGroupDanmakuType.getCheckedRadioButtonId() == R.id.btn_RToL){
+                danmakuType = BaseDanmaku.TYPE_SCROLL_RL;
+            }else if(mGroupDanmakuType.getCheckedRadioButtonId() == R.id.btn_LToR){
+                danmakuType = BaseDanmaku.TYPE_SCROLL_LR;
             }
-            danmaku.text = mInputText.getText().toString();
-            danmaku.padding = 5;
-            danmaku.priority = 1;
-            danmaku.isLive = true;
-            danmaku.time = mDanmakuView.getCurrentTime() + 1200;
-            danmaku.textSize = 25f * (mParser.getDisplayer().getDensity() - 0.6f);
-            danmaku.textColor = Color.RED;
-            danmaku.textShadowColor = Color.WHITE;
-            // danmaku.underlineColor = Color.GREEN;
-            danmaku.borderColor = Color.GREEN;
-            mDanmakuView.addDanmaku(danmaku);
+            int textColor = Color.RED;
+            if(mGroupDanmakuColor.getCheckedRadioButtonId() == R.id.btn_red)
+                textColor = Color.RED;
+            else if(mGroupDanmakuColor.getCheckedRadioButtonId() == R.id.btn_green)
+                textColor = Color.GREEN;
+            else if(mGroupDanmakuColor.getCheckedRadioButtonId() == R.id.btn_yellow)
+                textColor = Color.YELLOW;
+            String content = mInputText.getText().toString();
+            BaseDanmaku danmaku = addNewDanmaku(content,textColor,danmakuType,true);
             // 视频继续播放
             if (!mVideoView.isPlaying()) {
                 mVideoView.start();
@@ -392,8 +437,17 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
             mMediaController.setVisibility(View.GONE);
             this._hideSoftKeyBoard();
             Message msg = new Message();
+            JSONObject object = new JSONObject();
+            try{
+                object.put("content", danmaku.text);
+                object.put("color", danmaku.textColor);
+                object.put("danmaku_type",danmakuType);
+            }catch(JSONException e){
+                e.printStackTrace();
+            }
+            Log.d(TAG, object.toString());
             msg.what = 0;
-            msg.obj = danmaku.text;
+            msg.obj = object;
             senderThread.senderHandler.sendMessage(msg);
 //            if (mIamServer) {
 //                server_thread.serverHandler.sendMessage(msg);
@@ -481,14 +535,14 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
                 public void handleMessage(Message msg) {
                     if(msg.what == 0){
                         if(multicastSocket!=null){
-                            send((String)msg.obj);
+                            send(msg.obj.toString());
                         }
                     }
                     // one client is playing video
-                    if(msg.what == 1){
-                        if(multicastSocket!=null)
-                            send((String)msg.obj);
-                    }
+//                    if(msg.what == 1){
+//                        if(multicastSocket!=null)
+//                            send(msg.obj.toString());
+//                    }
                 }
             };
             try{
@@ -510,10 +564,17 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
                 }
                 multicastSocket.joinGroup(group);
                 ip = Formatter.formatIpAddress(wifiManager.getConnectionInfo().getIpAddress());
-                send("有人进入了房间");
+//                JSONObject jObject = new JSONObject();
+//                jObject.put("content", "有人进入了房间");
+//                jObject.put("color", Color.RED);
+//                jObject.put("danmaku_type", BaseDanmaku.TYPE_FIX_BOTTOM);
+//                send(jObject.toString());
             }catch(IOException e){
                 e.printStackTrace();
             }
+//            catch (JSONException e) {
+//                e.printStackTrace();
+//            }
             Looper.loop();
         }
     }
@@ -550,7 +611,8 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
                     e.printStackTrace();
                 }
                 multicastSocket.joinGroup(group);
-                byte[] receiveData = new byte[1024];
+                byte[] receiveData = new byte[2048];
+                Arrays.fill(receiveData, (byte)0);
                 DatagramPacket recv = new DatagramPacket(receiveData, receiveData.length);
                 while (true) {
                     multicastSocket.receive(recv);
@@ -562,9 +624,8 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
                     // call main Thread to render
                     Message msg = new Message();
                     msg.what = 0;
-                    String str = content;
-                    msg.obj = str;
-                    sendMessageToMainThread(str);
+                    msg.obj = content;
+                    sendMessageToMainThread(content);
                 }
 //                multicastLock.release();
             } catch (IOException e) {
@@ -575,10 +636,10 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
     }
 
 
-    public void addNewDanmaku(String content){
-        BaseDanmaku danmaku = mContext.mDanmakuFactory.createDanmaku(BaseDanmaku.TYPE_FIX_BOTTOM);
+    public BaseDanmaku addNewDanmaku(String content, int color, int danmakuType, boolean border){
+        BaseDanmaku danmaku = mContext.mDanmakuFactory.createDanmaku(danmakuType);
         if (danmaku == null || mDanmakuView == null) {
-            return;
+            return null;
         }
         danmaku.text = content;
         danmaku.padding = 5;
@@ -586,10 +647,12 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
         danmaku.isLive = true;
         danmaku.time = mDanmakuView.getCurrentTime() + 1200;
         danmaku.textSize = 25f * (mParser.getDisplayer().getDensity() - 0.6f);
-        danmaku.textColor = Color.RED;
+        danmaku.textColor = color;
         danmaku.textShadowColor = Color.WHITE;
         // danmaku.underlineColor = Color.GREEN;
-        danmaku.borderColor = Color.GREEN;
+        if(border)
+            danmaku.borderColor = Color.GREEN;
         mDanmakuView.addDanmaku(danmaku);
+        return danmaku;
     }
 }

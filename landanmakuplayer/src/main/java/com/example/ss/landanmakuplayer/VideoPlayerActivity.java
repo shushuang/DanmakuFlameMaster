@@ -5,7 +5,6 @@ import android.graphics.Color;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.net.wifi.WifiManager;
-import android.os.Looper;
 import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.content.pm.ActivityInfo;
@@ -13,7 +12,6 @@ import android.content.pm.ActivityInfo;
 import android.os.Bundle;
 import android.text.Spannable;
 import android.text.Spanned;
-import android.text.format.Formatter;
 import android.text.style.BackgroundColorSpan;
 import android.text.style.ImageSpan;
 import android.view.Menu;
@@ -33,17 +31,11 @@ import android.util.Log;
 
 import java.io.InputStream;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.DatagramPacket;
-import java.net.InetAddress;
-import java.net.MulticastSocket;
-import java.net.SocketException;
+import java.lang.ref.WeakReference;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.MalformedURLException;
-import java.net.UnknownHostException;
 import java.nio.channels.ServerSocketChannel;
-import java.util.Arrays;
 import java.util.HashMap;
 
 import android.os.Handler;
@@ -74,7 +66,6 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
     private IDanmakuView mDanmakuView;
     private DanmakuContext mContext;
     private BaseDanmakuParser mParser;
-    private ServerSocketChannel serverSocketChannel;
     private String mVideoName;
     private String mVidAddress;
     private String mServerIp;
@@ -84,41 +75,47 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
     private VideoView mVideoView;
     WifiManager.MulticastLock multicastLock;
     private static final String TAG = "VideoPlayerActivity";
-    private static final int MULTICAST_PORT = 5101;
-    private static final String GROUP_ID = "224.5.9.7";
-    //    private Button mBtnHideDanmaku;
-    //    private Button mBtnShowDanmaku;
     private Switch mSwitch_hs;
-    //    private Button mBtnPauseDanmaku;
     private ImageButton mBtnPauseOrResume;
-    private Button mBtnResumeDanmaku;
     private ImageButton mBtnSendDanmaku;
     private RadioGroup mGroupDanmakuType;
     private RadioGroup mGroupDanmakuColor;
-    //    private ImageButton mBtnRotate;
     private EditText mInputText;
-
-//    private SenderThread senderThread;
-//    private ReceiverThread receiverThread;
     private ClientThread clientThread;
 
-    private Handler mainHandler = new Handler() {
-        public void handleMessage(Message msg) {
-            if (msg.what == 0) {
-                JSONObject jsonObject = null;
-                try {
-                    jsonObject = new JSONObject((String)msg.obj);
-                    Log.d("mainThread", jsonObject.getString("content"));
-                    addNewDanmaku(jsonObject.getString("content"),
-                            jsonObject.getInt("color"),
-                            jsonObject.getInt("danmaku_type"),
-                            false);
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
+    private Handler mainHandler = new MainHandler(this);
+
+    static class MainHandler extends Handler {
+        private final WeakReference<VideoPlayerActivity> mActivity;
+
+        MainHandler(VideoPlayerActivity activity) {
+            mActivity = new WeakReference<VideoPlayerActivity>(activity);
+        }
+        @Override
+        public void handleMessage(Message msg)
+        {
+            VideoPlayerActivity activity = mActivity.get();
+            if (activity != null) {
+                activity.handleMessage(msg);
             }
         }
-    };
+    }
+
+    public void handleMessage(Message msg) {
+        if (msg.what == 0) {
+            JSONObject jsonObject = null;
+            try {
+                jsonObject = new JSONObject((String)msg.obj);
+                Log.d("mainThread", jsonObject.getString("content"));
+                addNewDanmaku(jsonObject.getString("content"),
+                        jsonObject.getInt("color"),
+                        jsonObject.getInt("danmaku_type"),
+                        false);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+    }
 
     static final RadioGroup.OnCheckedChangeListener ToggleListener = new RadioGroup.OnCheckedChangeListener() {
         @Override
@@ -380,9 +377,6 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
         }
         if (mDanmakuView == null || !mDanmakuView.isPrepared())
             return;
-//        if (v == mBtnRotate) {
-//            setRequestedOrientation(getRequestedOrientation() == Activitynfo.SCREEN_ORIENTATION_LANDSCAPE ? ActivityInfo.SCREEN_ORIENTATION_PORTRAIT : ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
-//        }
         else if (v == mSwitch_hs) {
             if (mDanmakuView.isShown())
                 mDanmakuView.hide();
@@ -496,130 +490,7 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
         mainHandler.sendMessage(msg);
     }
 
-    private class SenderThread extends Thread{
-        public Handler senderHandler;
-        private MulticastSocket multicastSocket;
-        private String ip;
-        private InetAddress group;
-        private void send(String content) {
-            // send my own ip
-            byte[] sendData = new byte[0];
-            try {
-                sendData = content.getBytes("UTF-8");
-            } catch (UnsupportedEncodingException e) {
-                e.printStackTrace();
-            }
-            DatagramPacket packet =
-                    new DatagramPacket(sendData, sendData.length, group, MULTICAST_PORT);
-            try {
-                multicastSocket.send(packet);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        public void run(){
-            Looper.prepare();
-            senderHandler = new Handler(){
-                public void handleMessage(Message msg) {
-                    if(msg.what == 0){
-                        if(multicastSocket!=null){
-                            send(msg.obj.toString());
-                        }
-                    }
-                }
-            };
-            try{
-                WifiManager wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
-                if(wifiManager != null) {
-                    multicastLock = wifiManager.createMulticastLock("multicast.test");
-                    multicastLock.acquire();
-                }
-                multicastSocket = new MulticastSocket(MULTICAST_PORT);
-                try {
-                    multicastSocket.setLoopbackMode(true);
-                } catch (SocketException e) {
-                    e.printStackTrace();
-                }
-                try {
-                    group = InetAddress.getByName(GROUP_ID);
-                } catch (UnknownHostException e) {
-                    e.printStackTrace();
-                }
-                multicastSocket.joinGroup(group);
-                ip = Formatter.formatIpAddress(wifiManager.getConnectionInfo().getIpAddress());
-//                JSONObject jObject = new JSONObject();
-//                jObject.put("content", "有人进入了房间");
-//                jObject.put("color", Color.RED);
-//                jObject.put("danmaku_type", BaseDanmaku.TYPE_FIX_BOTTOM);
-//                send(jObject.toString());
-            }catch(IOException e){
-                e.printStackTrace();
-            }
-//            catch (JSONException e) {
-//                e.printStackTrace();
-//            }
-            Looper.loop();
-        }
-    }
-    private class ReceiverThread extends Thread{
-        public Handler receiverHandler;
-        public void run() {
-            Looper.prepare();
-            receiverHandler = new Handler() {
-                public void handleMessage(Message msg) {
-                    if (msg.what == 0) {
-
-                    }
-                }
-            };
-            try {
-                WifiManager wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
-                if (wifiManager != null) {
-                    multicastLock = wifiManager.createMulticastLock("multicast.test");
-                    multicastLock.acquire();
-                }
-                String content = null;
-
-                MulticastSocket multicastSocket = null;
-                multicastSocket = new MulticastSocket(MULTICAST_PORT);
-                try {
-                    multicastSocket.setLoopbackMode(true);
-                } catch (SocketException e) {
-                    e.printStackTrace();
-                }
-                InetAddress group = null;
-                try {
-                    group = InetAddress.getByName(GROUP_ID);
-                } catch (UnknownHostException e) {
-                    e.printStackTrace();
-                }
-                multicastSocket.joinGroup(group);
-                byte[] receiveData = new byte[2048];
-                Arrays.fill(receiveData, (byte)0);
-                DatagramPacket recv = new DatagramPacket(receiveData, receiveData.length);
-                while (true) {
-                    multicastSocket.receive(recv);
-                    Log.d(TAG, "receive from" + recv.getAddress());
-                    recv.setLength(receiveData.length);
-//                    multicastSocket.leaveGroup(group);
-                    content = new String(receiveData, "UTF-8");
-                    Arrays.fill(receiveData, (byte)0);
-                    // call main Thread to render
-                    Message msg = new Message();
-                    msg.what = 0;
-                    msg.obj = content;
-                    sendMessageToMainThread(content);
-                }
-//                multicastLock.release();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            Looper.loop();
-        }
-    }
-
-
-    public BaseDanmaku addNewDanmaku(String content, int color, int danmakuType, boolean border){
+    public  BaseDanmaku addNewDanmaku(String content, int color, int danmakuType, boolean border){
         BaseDanmaku danmaku = mContext.mDanmakuFactory.createDanmaku(danmakuType);
         if (danmaku == null || mDanmakuView == null) {
             return null;

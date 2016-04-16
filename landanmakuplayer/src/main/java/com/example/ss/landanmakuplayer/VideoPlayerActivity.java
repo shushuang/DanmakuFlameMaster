@@ -87,7 +87,7 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
     private static final int MULTICAST_PORT = 5101;
     private static final String GROUP_ID = "224.5.9.7";
     //    private Button mBtnHideDanmaku;
-//    private Button mBtnShowDanmaku;
+    //    private Button mBtnShowDanmaku;
     private Switch mSwitch_hs;
     //    private Button mBtnPauseDanmaku;
     private ImageButton mBtnPauseOrResume;
@@ -98,9 +98,9 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
     //    private ImageButton mBtnRotate;
     private EditText mInputText;
 
-    private SenderThread senderThread;
-    private ReceiverThread receiverThread;
-
+//    private SenderThread senderThread;
+//    private ReceiverThread receiverThread;
+    private ClientThread clientThread;
 
     private Handler mainHandler = new Handler() {
         public void handleMessage(Message msg) {
@@ -116,7 +116,6 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
-
             }
         }
     };
@@ -191,6 +190,11 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
         Context context = getApplicationContext();
         mVidAddress = "http://127.0.0.1:8089";
         Intent inputIntent = getIntent();
+        WifiManager wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
+        if(wifiManager != null) {
+            multicastLock = wifiManager.createMulticastLock("multicast.test");
+            multicastLock.acquire();
+        }
         if (inputIntent.getIntExtra(MainActivity.SOURCE_TYPE, MainActivity.LOCAL_VIDEO)
                 == MainActivity.LOCAL_VIDEO) {
             Intent i = new Intent(context, VidServerService.class);
@@ -201,15 +205,22 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
             context.startService(i);
             Log.w("Httpd", "Web server initialized.");
             mIamServer = true;
+            try {
+                new ServerThread(5454).start();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         } else {
             mVidAddress = inputIntent.getStringExtra(MainActivity.VIDEO_URL);
             mIamServer = false;
-//            mServerIp = mVidAddress.split(":")[1].substring(2);
         }
-        senderThread = new SenderThread();
-        receiverThread = new ReceiverThread();
-        senderThread.start();
-        receiverThread.start();
+        mServerIp = mVidAddress.split(":")[1].substring(2);
+//        senderThread = new SenderThread();
+//        receiverThread = new ReceiverThread();
+//        senderThread.start();
+//        receiverThread.start();
+        clientThread = new ClientThread(mainHandler, mServerIp);
+        clientThread.start();
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
         findViews();
     }
@@ -222,24 +233,14 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
         mGroupDanmakuType.setOnCheckedChangeListener(ToggleListener);
         mGroupDanmakuColor.setOnCheckedChangeListener(ToggleListener);
 
-//        mBtnRotate = (ImageButton) findViewById(R.id.rotate);
-//        mBtnHideDanmaku = (Button) findViewById(R.id.btn_hide);
-//        mBtnShowDanmaku = (Button) findViewById(R.id.btn_show);
         mSwitch_hs = (Switch) findViewById(R.id.switch_hs);
-//        mBtnPauseDanmaku = (Button) findViewById(R.id.btn_pause);
-//        mBtnResumeDanmaku = (Button) findViewById(R.id.btn_resume);
         mBtnPauseOrResume = (ImageButton) findViewById(R.id.btn_pr);
         mBtnSendDanmaku = (ImageButton) findViewById(R.id.btn_send);
 
         mInputText = (EditText) findViewById(R.id.danmuku_input);
 
-//        mBtnRotate.setOnClickListener(this);
-//        mBtnHideDanmaku.setOnClickListener(this);
         mMediaController.setOnClickListener(this);
-//        mBtnShowDanmaku.setOnClickListener(this);
         mSwitch_hs.setOnClickListener(this);
-//        mBtnPauseDanmaku.setOnClickListener(this);
-//        mBtnResumeDanmaku.setOnClickListener(this);
         mBtnPauseOrResume.setOnClickListener(this);
         mBtnSendDanmaku.setOnClickListener(this);
 
@@ -321,7 +322,6 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
                 Uri vidUri = Uri.parse(mVidAddress);
                 mVideoView.setVideoURI(vidUri);
             }
-//            mVideoView.setVideoPath(Environment.getExternalStorageDirectory()+"/Test1.mp4");
         }
     }
 
@@ -332,12 +332,6 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
         if (mDanmakuView != null && mDanmakuView.isPrepared()) {
             mDanmakuView.pause();
         }
-//        try {
-//            if(serverSocketChannel != null)
-//                serverSocketChannel.close();
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
     }
 
     @Override
@@ -446,13 +440,8 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
             }
             Log.d(TAG, object.toString());
             msg.what = 0;
-            msg.obj = object;
-            senderThread.senderHandler.sendMessage(msg);
-//            if (mIamServer) {
-//                server_thread.serverHandler.sendMessage(msg);
-//            } else {
-//                client_thread.clientHandler.sendMessage(msg);
-//            }
+            msg.obj = object.toString();
+            clientThread.senderHandler.sendMessage(msg);
         }
     }
 
@@ -537,11 +526,6 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
                             send(msg.obj.toString());
                         }
                     }
-                    // one client is playing video
-//                    if(msg.what == 1){
-//                        if(multicastSocket!=null)
-//                            send(msg.obj.toString());
-//                    }
                 }
             };
             try{
@@ -648,7 +632,6 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
         danmaku.textSize = 25f * (mParser.getDisplayer().getDensity() - 0.6f);
         danmaku.textColor = color;
         danmaku.textShadowColor = Color.WHITE;
-        // danmaku.underlineColor = Color.GREEN;
         if(border)
             danmaku.borderColor = Color.GREEN;
         mDanmakuView.addDanmaku(danmaku);

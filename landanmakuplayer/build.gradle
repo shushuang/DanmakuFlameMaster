@@ -11,8 +11,8 @@ android {
 
     defaultConfig {
         applicationId "com.example.ss.landanmakuplayer"
-        minSdkVersion 14
-        targetSdkVersion 23
+        minSdkVersion 16
+        targetSdkVersion 18
         versionCode 1
         versionName "1.0"
     }

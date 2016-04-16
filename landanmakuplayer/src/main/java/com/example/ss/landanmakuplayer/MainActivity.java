@@ -27,11 +27,8 @@ import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
-import java.util.TreeSet;
 
 
 
@@ -44,7 +41,6 @@ public class MainActivity extends AppCompatActivity {
     private String state = "Online";
     private ListView listView;
     private Map<String, String> peersMap = new TreeMap<String, String>();
-    private Set<String> setItems = new TreeSet<>();
     private ArrayList<String> listItems = new ArrayList<String>();
     private ArrayAdapter<String> adapter;
     private Button refreshBtn;
@@ -189,7 +185,6 @@ public class MainActivity extends AppCompatActivity {
             {
                 listItems.add(entry.getKey() + ":" + entry.getValue());
             }
-
             adapter.notifyDataSetChanged();
         }
     };

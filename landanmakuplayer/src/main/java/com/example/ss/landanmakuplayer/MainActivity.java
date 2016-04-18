@@ -38,7 +38,7 @@ public class MainActivity extends AppCompatActivity {
     public static final String VIDEO_URL= "videourl";
     public static final int LOCAL_VIDEO = 0;
     public static final int REMOTE_URL = 1;
-    private String state = "Online";
+    public static String state = "Online";
     private ListView listView;
     private Map<String, String> peersMap = new TreeMap<String, String>();
     private ArrayList<String> listItems = new ArrayList<String>();

@@ -141,6 +141,7 @@
             <!--android:layout_weight="1"-->
             <!--android:layout_height="wrap_content"-->
             <!--android:text="@string/show_danmaku" />-->
+
         <Switch
             android:id="@+id/switch_hs"
             android:layout_height="wrap_content"

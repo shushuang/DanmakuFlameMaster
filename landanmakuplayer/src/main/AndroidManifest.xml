@@ -29,11 +29,20 @@
             android:name=".MainActivity"
             android:label="一起来看"
             android:theme="@style/AppTheme">
+        </activity>
+        <activity android:name=".LibraryActivity"
+            android:label="媒体库"
+            android:theme="@style/AppTheme">
+        </activity>
+        <activity android:name=".MainTabActivity"
+            android:label="一起看"
+            android:theme="@style/AppTheme">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
     </application>
 
 </manifest>

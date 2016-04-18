@@ -6,6 +6,7 @@ import android.media.MediaPlayer;
 import android.net.Uri;
 import android.net.wifi.WifiManager;
 import android.os.Message;
+import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
 import android.content.pm.ActivityInfo;
 
@@ -17,9 +18,9 @@ import android.text.style.ImageSpan;
 import android.view.Menu;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.MediaController;
 import android.widget.RadioGroup;
 import android.widget.Switch;
 import android.widget.ToggleButton;
@@ -35,7 +36,6 @@ import java.lang.ref.WeakReference;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.MalformedURLException;
-import java.nio.channels.ServerSocketChannel;
 import java.util.HashMap;
 
 import android.os.Handler;
@@ -71,7 +71,9 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
     private String mServerIp;
     private Boolean mIamServer;
 
-    private View mMediaController;
+
+    private View mDanmakuController;
+    private MediaController mMediaController;
     private VideoView mVideoView;
     WifiManager.MulticastLock multicastLock;
     private static final String TAG = "VideoPlayerActivity";
@@ -223,7 +225,7 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
     }
 
     private void findViews() {
-        mMediaController = findViewById(R.id.media_controller);
+        mDanmakuController = findViewById(R.id.media_controller);
         mVideoView = (VideoView) findViewById(R.id.videoview);
         mGroupDanmakuType = (RadioGroup) findViewById(R.id.group_danmaku_type);
         mGroupDanmakuColor = (RadioGroup) findViewById(R.id.group_danmaku_color);
@@ -236,7 +238,7 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
 
         mInputText = (EditText) findViewById(R.id.danmuku_input);
 
-        mMediaController.setOnClickListener(this);
+        mDanmakuController.setOnClickListener(this);
         mSwitch_hs.setOnClickListener(this);
         mBtnPauseOrResume.setOnClickListener(this);
         mBtnSendDanmaku.setOnClickListener(this);
@@ -301,7 +303,8 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
 
                 @Override
                 public void onClick(View view) {
-                    mMediaController.setVisibility(View.VISIBLE);
+                    mDanmakuController.setVisibility(View.VISIBLE);
+                    mMediaController.show();
                 }
             });
         }
@@ -312,10 +315,16 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
                     mp.start();
                 }
             });
+            mMediaController = new
+                    MediaController(this);
+            mMediaController.setAnchorView(mDanmakuController);
+            mVideoView.setMediaController(mMediaController);
             if(mIamServer){
+
                 mVideoView.setVideoPath(mVideoName);
             }
             else{
+
                 Uri vidUri = Uri.parse(mVidAddress);
                 mVideoView.setVideoURI(vidUri);
             }
@@ -371,8 +380,9 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
     }
     @Override
     public void onClick(View v) {
-        if (v == mMediaController) {
-            mMediaController.setVisibility(View.GONE);
+        if (v == mDanmakuController) {
+            mDanmakuController.setVisibility(View.GONE);
+            mMediaController.hide();
             _hideSoftKeyBoard();
         }
         if (mDanmakuView == null || !mDanmakuView.isPrepared())
@@ -421,7 +431,8 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
                 mVideoView.start();
             }
             mInputText.setText("");
-            mMediaController.setVisibility(View.GONE);
+            mDanmakuController.setVisibility(View.GONE);
+            mMediaController.hide();
             this._hideSoftKeyBoard();
             Message msg = new Message();
             JSONObject object = new JSONObject();

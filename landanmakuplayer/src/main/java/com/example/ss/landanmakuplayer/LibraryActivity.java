@@ -12,8 +12,12 @@ import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.text.format.Formatter;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.AdapterView;
 import android.widget.BaseAdapter;
 import android.widget.Button;
@@ -34,13 +38,17 @@ import java.net.MulticastSocket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.TreeSet;
 
 /**
  * Created by ss on 4/17/16.
  */
 public class LibraryActivity extends AppCompatActivity  implements AdapterView.OnItemClickListener{
+    private Menu libMenu;
     List<VideoInfo> mp4Rows;
+    LinkedHashSet<VideoInfo> mp4Set;
     BaseAdapter mAdapter;
     private String fname = "cache.txt";
     private static final int MULTICAST_PORT = 5100;
@@ -53,24 +61,53 @@ public class LibraryActivity extends AppCompatActivity  implements AdapterView.O
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_library);
         ListView listView = (ListView)findViewById(R.id.ListView);
-        Button refreshBtn = (Button)findViewById(R.id.btn_refreshCache);
         mp4Rows = new ArrayList<VideoInfo>();
-        File f = new File(fname);
+        mp4Set = new LinkedHashSet<VideoInfo>();
         LoadFromCache();
         mAdapter = new Mp4GalleryAdapter(this, mp4Rows);
         listView.setAdapter(mAdapter);;
         sender = new SenderThread();
         sender.start();
         listView.setOnItemClickListener(this);
+    }
 
-        refreshBtn.setOnClickListener(new View.OnClickListener() {
-                                          @Override
-                                          public void onClick(View v) {
-                                              new LongOperation().execute("");
-                                          }
-                                      }
-        );
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.lib_menu, menu);
+        libMenu = menu;
+        return true;
+    }
 
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch(item.getItemId()){
+            case R.id.action_refresh:
+                new LongOperation().execute("");
+                return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    public void startRefreshAnimation(){
+        MenuItem m = libMenu.findItem(R.id.action_refresh);
+        LayoutInflater inflater = (LayoutInflater)getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+        ImageView iv = (ImageView)inflater.inflate(R.layout.iv_refresh, null);
+        Animation rotation = AnimationUtils.loadAnimation(this, R.anim.rotate_refresh);
+        rotation.setRepeatCount(Animation.INFINITE);
+        iv.startAnimation(rotation);
+        m.setActionView(iv);
+    }
+
+    public void stopRefreshAnimation()
+    {
+        // Get our refresh item from the menu
+        MenuItem m = libMenu.findItem(R.id.action_refresh);
+        if(m.getActionView()!=null)
+        {
+            // Remove the animation.
+            m.getActionView().clearAnimation();
+            m.setActionView(null);
+        }
     }
 
     public void LoadFromCache(){
@@ -116,8 +153,16 @@ public class LibraryActivity extends AppCompatActivity  implements AdapterView.O
     private class LongOperation extends AsyncTask<String, String, String> {
 
         @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            startRefreshAnimation();
+        }
+
+        @Override
         protected String doInBackground(String... params) {
             walkin(new File("/storage"));
+            mp4Rows.clear();
+            mp4Rows.addAll(mp4Set);
             System.out.println(mp4Rows);
             SaveToCache();
             return "execute";
@@ -126,6 +171,7 @@ public class LibraryActivity extends AppCompatActivity  implements AdapterView.O
         @Override
         protected void onPostExecute(String s) {
             super.onPostExecute(s);
+            stopRefreshAnimation();
             mAdapter.notifyDataSetChanged();
         }
     }
@@ -143,7 +189,7 @@ public class LibraryActivity extends AppCompatActivity  implements AdapterView.O
                         VideoInfo newvi = new VideoInfo();
                         newvi.name = listFile[i].getName();
                         newvi.path = listFile[i].getPath();
-                        mp4Rows.add(newvi);
+                        mp4Set.add(newvi);
                     }
                 }
             }

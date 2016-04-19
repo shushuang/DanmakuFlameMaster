@@ -237,7 +237,7 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
         mBtnSendDanmaku = (ImageButton) findViewById(R.id.btn_send);
 
         mInputText = (EditText) findViewById(R.id.danmuku_input);
-
+        
         mDanmakuController.setOnClickListener(this);
         mSwitch_hs.setOnClickListener(this);
         mBtnPauseOrResume.setOnClickListener(this);

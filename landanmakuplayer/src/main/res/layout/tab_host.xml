@@ -23,12 +23,10 @@
             android:layout_height="wrap_content"
             android:layout_weight="0"
             android:layout_width="fill_parent"
-            android:background="#252a31"
             android:tabStripEnabled="false"
             >
 
         </TabWidget>
-
     </LinearLayout>
 
 </TabHost>

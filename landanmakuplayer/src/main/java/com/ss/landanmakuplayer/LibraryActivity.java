@@ -3,16 +3,19 @@ package com.ss.landanmakuplayer;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.drawable.BitmapDrawable;
 import android.media.ThumbnailUtils;
 import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
 import android.text.format.Formatter;
+import android.util.LruCache;
 import android.view.ContextMenu;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -51,6 +54,7 @@ public class LibraryActivity extends AppCompatActivity  implements AdapterView.O
     private static final int MENU_LIVE555_MULTICAST = 1;
     private static final int MENU_DELETE = 2;
     private Menu libMenu;
+
     List<VideoInfo> mp4Rows;
     LinkedHashSet<VideoInfo> mp4Set;
     BaseAdapter mAdapter;
@@ -59,6 +63,68 @@ public class LibraryActivity extends AppCompatActivity  implements AdapterView.O
     private static final String GROUP_ID = "224.5.9.7";
     private SenderThread sender;
     WifiManager.MulticastLock multicastLock;
+
+
+
+    private DiskLruImageCache mDiskLruCache;
+    private final Object mDiskCacheLock = new Object();
+    private boolean mDiskCacheStarting = true;
+    private static final int DISK_CACHE_SIZE = 1024 * 1024 * 10; // 10MB
+    private static final String DISK_CACHE_SUBDIR = "thumbnails";
+
+
+
+
+
+    private final int maxMemory = (int)(Runtime.getRuntime().maxMemory()/1024);
+    private final int cacheSize = maxMemory/8;
+    private LruCache<String,Bitmap> mLruCache = new LruCache<String, Bitmap>(cacheSize){
+        @Override
+        protected  int  sizeOf(String key, Bitmap bitmap){
+            return bitmap.getByteCount()/1024;
+        }
+    };
+
+    private void addBitmapToMemoryCache(String key, Bitmap bitmap){
+        if(getBitmapFromMemoryCache(key) == null){
+            mLruCache.put(key, bitmap);
+        }
+    }
+
+    public Bitmap getBitmapFromMemoryCache(String key){
+        return mLruCache.get(key);
+    }
+
+    public void addBitmapToCache(String key, Bitmap bitmap) {
+        // Add to memory cache as before
+        if (getBitmapFromMemoryCache(key) == null) {
+            addBitmapToMemoryCache(key, bitmap);
+        }
+
+        // Also add to disk cache
+        synchronized (mDiskCacheLock) {
+            if (mDiskLruCache != null && mDiskLruCache.getBitmap(key) == null) {
+                mDiskLruCache.put(key, bitmap);
+            }
+        }
+    }
+
+    public Bitmap getBitmapFromDiskCache(String key) {
+        synchronized (mDiskCacheLock) {
+            // Wait while disk cache is started from background thread
+            while (mDiskCacheStarting) {
+                try {
+                    mDiskCacheLock.wait();
+                } catch (InterruptedException e) {}
+            }
+            if (mDiskLruCache != null) {
+                return mDiskLruCache.getBitmap(key);
+            }
+        }
+        return null;
+    }
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -75,7 +141,25 @@ public class LibraryActivity extends AppCompatActivity  implements AdapterView.O
         sender = new SenderThread();
         sender.start();
         listView.setOnItemClickListener(this);
+        new InitDiskCacheTask().execute(this.getBaseContext());
+
+
     }
+    class InitDiskCacheTask extends AsyncTask<Context, Void, Void> {
+        @Override
+        protected Void doInBackground(Context... params) {
+            synchronized (mDiskCacheLock) {
+                mDiskLruCache = new DiskLruImageCache(
+                        (Context)params[0], "thumbnails", DISK_CACHE_SIZE,
+                        Bitmap.CompressFormat.JPEG, 70
+                );
+                mDiskCacheStarting = false; // Finished initialization
+                mDiskCacheLock.notifyAll(); // Wake any waiting threads
+            }
+            return null;
+        }
+    }
+
 
     @Override
     public void onCreateContextMenu(ContextMenu menu, View v,
@@ -257,15 +341,15 @@ public class LibraryActivity extends AppCompatActivity  implements AdapterView.O
         }
     }
 
-    class Mp4GalleryAdapter extends BaseAdapter{
+    class Mp4GalleryAdapter extends BaseAdapter {
         Context context;
         List<VideoInfo> mp4Rows;
         LayoutInflater inflater;
-        public Mp4GalleryAdapter(Context context, List<VideoInfo> mp4Rows)
-        {
+
+        public Mp4GalleryAdapter(Context context, List<VideoInfo> mp4Rows) {
             this.context = context;
             this.mp4Rows = mp4Rows;
-            inflater = (LayoutInflater)context.getSystemService(
+            inflater = (LayoutInflater) context.getSystemService(
                     Context.LAYOUT_INFLATER_SERVICE
             );
         }
@@ -287,16 +371,63 @@ public class LibraryActivity extends AppCompatActivity  implements AdapterView.O
 
         @Override
         public View getView(int position, View convertView, ViewGroup parent) {
-            View videoRow = inflater.inflate(R.layout.list_item, null);
-            ImageView videoThumb = (ImageView) videoRow.findViewById(R.id.ImageView);
-            TextView videoTitle = (TextView) videoRow.findViewById(R.id.TextView);
+
+            View v = convertView;
+            if (v == null) {
+
+                v = inflater.inflate(R.layout.list_item, null);
+
+            }
+
+            ImageView iv = (ImageView) v.findViewById(R.id.ImageView);
+            TextView tv = (TextView) v.findViewById(R.id.TextView);
+            iv.setTag(mp4Rows.get(position).path);
 //            Bitmap thumb = ThumbnailUtils.createVideoThumbnail(mp4Rows.get(position).path,
 //                   MediaStore.Images.Thumbnails.MINI_KIND);
 //            videoThumb.setImageBitmap(thumb);
-            videoTitle.setText(mp4Rows.get(position).name);
-            return videoRow;
+            tv.setText(mp4Rows.get(position).name);
+            BitmapWorkerTask asyncLoader = new BitmapWorkerTask();
+            Bitmap bitmap = getBitmapFromMemoryCache(String.valueOf(position));
+            if (bitmap != null) {
+                iv.setImageBitmap(bitmap);
+            } else {
+                iv.setImageResource(R.drawable.ic_launcher);
+                asyncLoader.execute(iv, mp4Rows.get(position).path, String.valueOf(position));
+            }
+            return v;
         }
-    }
+
+        class BitmapWorkerTask extends AsyncTask<Object, Void, Bitmap> {
+            private ImageView iv;
+            private String path;
+            private String position;
+
+            // Decode image in background.
+            @Override
+            protected Bitmap doInBackground(Object... params) {
+                iv = (ImageView) params[0];
+                path = (String) params[1];
+                position = (String) params[2];
+                Bitmap bitmap =  getBitmapFromDiskCache(position);
+                if (bitmap == null) {
+                    bitmap = ThumbnailUtils.createVideoThumbnail(path,
+                            MediaStore.Images.Thumbnails.MINI_KIND);
+                    if (position != null && bitmap != null) {
+                        addBitmapToCache(position, bitmap);
+                    }
+                }
+                return bitmap;
+            }
+
+            @Override
+            protected void onPostExecute(Bitmap result) {
+                if (iv.getTag().equals(path)) {
+                    iv.setImageBitmap(result);
+                }
+            }
+        }
+        ;
+    };
 
     private class SenderThread extends Thread{
         public Handler senderHandler;

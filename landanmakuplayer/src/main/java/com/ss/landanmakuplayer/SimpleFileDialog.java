@@ -1,4 +1,4 @@
-package com.example.ss.landanmakuplayer;
+package com.ss.landanmakuplayer;
 /*
 *
 * This file is licensed under The Code Project Open License (CPOL) 1.02
@@ -22,24 +22,15 @@ package com.example.ss.landanmakuplayer;
 *  (See Links above for full license text)
 */
 
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnClickListener;
-//import android.content.DialogInterface.OnKeyListener;
 import android.os.Environment;
 import android.support.v4.content.ContextCompat;
 import android.text.Editable;
 import android.util.Log;
 import android.view.Gravity;
-//import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewGroup.LayoutParams;
@@ -49,6 +40,16 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+
+//import android.content.DialogInterface.OnKeyListener;
+//import android.view.KeyEvent;
 
 public class SimpleFileDialog
 {
@@ -139,7 +140,7 @@ public class SimpleFileDialog
         m_dir = dir;
         m_subdirs = getDirectories(dir);
 
-        class SimpleFileDialogOnClickListener implements DialogInterface.OnClickListener
+        class SimpleFileDialogOnClickListener implements OnClickListener
         {
             public void onClick(DialogInterface dialog, int item)
             {
@@ -258,7 +259,7 @@ public class SimpleFileDialog
     //////                                   START DIALOG DEFINITION                                    //////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     private AlertDialog.Builder createDirectoryChooserDialog(String title, List<String> listItems,
-                                                             DialogInterface.OnClickListener onClickListener)
+                                                             OnClickListener onClickListener)
     {
         AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(m_context);
         ////////////////////////////////////////////////
@@ -304,7 +305,7 @@ public class SimpleFileDialog
                                                     // Show new folder name input dialog
                                                     new AlertDialog.Builder(m_context).
                                                             setTitle("New Folder Name").
-                                                            setView(input).setPositiveButton("OK", new DialogInterface.OnClickListener()
+                                                            setView(input).setPositiveButton("OK", new OnClickListener()
                                                     {
                                                         public void onClick(DialogInterface dialog, int whichButton)
                                                         {

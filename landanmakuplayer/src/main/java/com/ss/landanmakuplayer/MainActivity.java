@@ -1,14 +1,14 @@
-package com.example.ss.landanmakuplayer;
+package com.ss.landanmakuplayer;
 
 import android.content.Context;
 import android.content.Intent;
 import android.net.wifi.WifiManager;
+import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
-import android.os.Handler;
 import android.text.format.Formatter;
 import android.util.Log;
 import android.view.View;
@@ -18,6 +18,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Toast;
+
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -31,13 +32,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 
-
 public class MainActivity extends AppCompatActivity {
-    public static final String VIDEO_FILE="videofile";
-    public static final String SOURCE_TYPE="sourcetype";
-    public static final String VIDEO_URL= "videourl";
-    public static final int LOCAL_VIDEO = 0;
-    public static final int REMOTE_URL = 1;
     public static String state = "Online";
     private ListView listView;
     private Map<String, String> peersMap = new TreeMap<String, String>();
@@ -84,8 +79,8 @@ public class MainActivity extends AppCompatActivity {
                     String ip = item.split(":")[0];
                     String play_url = "http:/" + ip + ":8089";
                     Intent i = new Intent(MainActivity.this, VideoPlayerActivity.class);
-                    i.putExtra(SOURCE_TYPE, REMOTE_URL);
-                    i.putExtra(VIDEO_URL, play_url);
+                    i.putExtra(AppConstant.SOURCE_TYPE, AppConstant.REMOTE_URL);
+                    i.putExtra(AppConstant.VIDEO_URL, play_url);
                     startActivity(i);
                 }
             }
@@ -111,8 +106,8 @@ public class MainActivity extends AppCompatActivity {
                 sender.senderHandler.sendMessage(msg);
                 Intent intent = new Intent(MainActivity.this, VideoPlayerActivity.class);
                 String url = mNetStreamEdit.getText().toString();
-                intent.putExtra(VIDEO_URL, url);
-                intent.putExtra(SOURCE_TYPE, REMOTE_URL);
+                intent.putExtra(AppConstant.VIDEO_URL, url);
+                intent.putExtra(AppConstant.SOURCE_TYPE, AppConstant.REMOTE_URL);
                 startActivity(intent);
             }
         });
@@ -139,8 +134,8 @@ public class MainActivity extends AppCompatActivity {
                                     msg.obj = "Playing";
                                     sender.senderHandler.sendMessage(msg);
                                     Intent intent = new Intent(MainActivity.this, VideoPlayerActivity.class);
-                                    intent.putExtra(VIDEO_FILE, chosenDir);
-                                    intent.putExtra(SOURCE_TYPE, LOCAL_VIDEO);
+                                    intent.putExtra(AppConstant.VIDEO_FILE, chosenDir);
+                                    intent.putExtra(AppConstant.SOURCE_TYPE, AppConstant.LOCAL_VIDEO);
                                     startActivity(intent);
                                 }
                                 // The code in this function will be executed when the dialog OK button is pushed

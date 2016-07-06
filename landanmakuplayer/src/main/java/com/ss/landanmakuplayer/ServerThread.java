@@ -1,4 +1,4 @@
-package com.example.ss.landanmakuplayer;
+package com.ss.landanmakuplayer;
 
 /**
  * Created by ss on 4/16/16.

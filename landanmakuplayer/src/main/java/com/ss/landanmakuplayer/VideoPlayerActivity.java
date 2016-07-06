@@ -1,20 +1,24 @@
-package com.example.ss.landanmakuplayer;
+package com.ss.landanmakuplayer;
+
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.graphics.Color;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.net.wifi.WifiManager;
-import android.os.Message;
-import android.provider.MediaStore;
-import android.support.v7.app.AppCompatActivity;
-import android.content.pm.ActivityInfo;
-
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
+import android.support.v7.app.AppCompatActivity;
 import android.text.Spannable;
+import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.style.BackgroundColorSpan;
 import android.text.style.ImageSpan;
+import android.util.Log;
 import android.view.Menu;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
@@ -25,23 +29,17 @@ import android.widget.RadioGroup;
 import android.widget.Switch;
 import android.widget.ToggleButton;
 import android.widget.VideoView;
-import android.graphics.drawable.Drawable;
-import android.graphics.drawable.BitmapDrawable;
-import android.text.SpannableStringBuilder;
-import android.util.Log;
-
-import java.io.InputStream;
-import java.io.IOException;
-import java.lang.ref.WeakReference;
-import java.net.URL;
-import java.net.URLConnection;
-import java.net.MalformedURLException;
-import java.util.HashMap;
-
-import android.os.Handler;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.lang.ref.WeakReference;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLConnection;
+import java.util.HashMap;
 
 import master.flame.danmaku.controller.DrawHandler;
 import master.flame.danmaku.controller.IDanmakuView;
@@ -50,16 +48,16 @@ import master.flame.danmaku.danmaku.loader.IllegalDataException;
 import master.flame.danmaku.danmaku.loader.android.DanmakuLoaderFactory;
 import master.flame.danmaku.danmaku.model.BaseDanmaku;
 import master.flame.danmaku.danmaku.model.DanmakuTimer;
+import master.flame.danmaku.danmaku.model.IDanmakus;
 import master.flame.danmaku.danmaku.model.IDisplayer;
 import master.flame.danmaku.danmaku.model.android.BaseCacheStuffer;
 import master.flame.danmaku.danmaku.model.android.DanmakuContext;
 import master.flame.danmaku.danmaku.model.android.Danmakus;
 import master.flame.danmaku.danmaku.model.android.SpannedCacheStuffer;
+import master.flame.danmaku.danmaku.parser.BaseDanmakuParser;
 import master.flame.danmaku.danmaku.parser.IDataSource;
 import master.flame.danmaku.danmaku.parser.android.BiliDanmukuParser;
 import master.flame.danmaku.danmaku.util.IOUtils;
-import master.flame.danmaku.danmaku.model.IDanmakus;
-import master.flame.danmaku.danmaku.parser.BaseDanmakuParser;
 
 
 public class VideoPlayerActivity extends AppCompatActivity implements View.OnClickListener {
@@ -194,12 +192,12 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
             multicastLock = wifiManager.createMulticastLock("multicast.test");
             multicastLock.acquire();
         }
-        if (inputIntent.getIntExtra(MainActivity.SOURCE_TYPE, MainActivity.LOCAL_VIDEO)
-                == MainActivity.LOCAL_VIDEO) {
+        if (inputIntent.getIntExtra(AppConstant.SOURCE_TYPE, AppConstant.LOCAL_VIDEO)
+                == AppConstant.LOCAL_VIDEO) {
             Intent i = new Intent(context, VidServerService.class);
             // potentially add data to the intent
-            mVideoName = inputIntent.getStringExtra(MainActivity.VIDEO_FILE);
-            i.putExtra(MainActivity.VIDEO_FILE, mVideoName);
+            mVideoName = inputIntent.getStringExtra(AppConstant.VIDEO_FILE);
+            i.putExtra(AppConstant.VIDEO_FILE, mVideoName);
             //i.putExtra("KEY1", "Value to be used by the service");
             context.startService(i);
             Log.w("Httpd", "Web server initialized.");
@@ -210,14 +208,10 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
                 e.printStackTrace();
             }
         } else {
-            mVidAddress = inputIntent.getStringExtra(MainActivity.VIDEO_URL);
+            mVidAddress = inputIntent.getStringExtra(AppConstant.VIDEO_URL);
             mIamServer = false;
         }
         mServerIp = mVidAddress.split(":")[1].substring(2);
-//        senderThread = new SenderThread();
-//        receiverThread = new ReceiverThread();
-//        senderThread.start();
-//        receiverThread.start();
         clientThread = new ClientThread(mainHandler, mServerIp);
         clientThread.start();
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);

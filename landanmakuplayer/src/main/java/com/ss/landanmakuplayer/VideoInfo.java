@@ -1,4 +1,4 @@
-package com.example.ss.landanmakuplayer;
+package com.ss.landanmakuplayer;
 
 import java.io.Serializable;
 

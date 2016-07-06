@@ -1,11 +1,9 @@
-package com.example.ss.landanmakuplayer;
+package com.ss.landanmakuplayer;
 
 import android.app.Service;
 import android.content.Intent;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
-
-import java.io.IOException;
 
 /**
  * Created by ss on 4/17/16.

@@ -1,14 +1,16 @@
-package com.example.ss.landanmakuplayer;
+package com.ss.landanmakuplayer;
 
 import android.content.Context;
 import android.content.Intent;
-import android.net.Uri;
+import android.graphics.Bitmap;
+import android.media.ThumbnailUtils;
 import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
 import android.text.format.Formatter;
 import android.view.LayoutInflater;
@@ -20,17 +22,16 @@ import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.AdapterView;
 import android.widget.BaseAdapter;
-import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
+
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
-import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
@@ -40,7 +41,6 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.TreeSet;
 
 /**
  * Created by ss on 4/17/16.
@@ -145,13 +145,12 @@ public class LibraryActivity extends AppCompatActivity  implements AdapterView.O
         sender.senderHandler.sendMessage(message);
         // start activity
         Intent intent = new Intent(LibraryActivity.this, VideoPlayerActivity.class);
-        intent.putExtra(MainActivity.VIDEO_FILE, vi.path);
-        intent.putExtra(MainActivity.SOURCE_TYPE, MainActivity.LOCAL_VIDEO);
+        intent.putExtra(AppConstant.VIDEO_FILE, vi.path);
+        intent.putExtra(AppConstant.SOURCE_TYPE, AppConstant.LOCAL_VIDEO);
         startActivity(intent);
     }
 
     private class LongOperation extends AsyncTask<String, String, String> {
-
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
@@ -229,6 +228,9 @@ public class LibraryActivity extends AppCompatActivity  implements AdapterView.O
             View videoRow = inflater.inflate(R.layout.list_item, null);
             ImageView videoThumb = (ImageView) videoRow.findViewById(R.id.ImageView);
             TextView videoTitle = (TextView) videoRow.findViewById(R.id.TextView);
+            Bitmap thumb = ThumbnailUtils.createVideoThumbnail(mp4Rows.get(position).path,
+                   MediaStore.Images.Thumbnails.MINI_KIND);
+            videoThumb.setImageBitmap(thumb);
             videoTitle.setText(mp4Rows.get(position).name);
             return videoRow;
         }

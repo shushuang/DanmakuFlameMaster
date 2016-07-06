@@ -1,4 +1,4 @@
-package com.example.ss.landanmakuplayer;
+package com.ss.landanmakuplayer;
 
 import android.app.Service;
 import android.content.Intent;
@@ -13,7 +13,7 @@ public class VidServerService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        server = new H264VideoServer( intent.getStringExtra(MainActivity.VIDEO_FILE));
+        server = new H264VideoServer( intent.getStringExtra(AppConstant.VIDEO_FILE));
         try {
             server.start();
         } catch (IOException e) {

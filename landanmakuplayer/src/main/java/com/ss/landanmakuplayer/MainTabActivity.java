@@ -1,4 +1,4 @@
-package com.example.ss.landanmakuplayer;
+package com.ss.landanmakuplayer;
 
 import android.app.TabActivity;
 import android.content.Intent;

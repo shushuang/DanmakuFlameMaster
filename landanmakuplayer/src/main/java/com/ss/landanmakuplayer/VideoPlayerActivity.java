@@ -194,13 +194,22 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
         }
         if (inputIntent.getIntExtra(AppConstant.SOURCE_TYPE, AppConstant.LOCAL_VIDEO)
                 == AppConstant.LOCAL_VIDEO) {
-            Intent i = new Intent(context, VidServerService.class);
-            // potentially add data to the intent
-            mVideoName = inputIntent.getStringExtra(AppConstant.VIDEO_FILE);
-            i.putExtra(AppConstant.VIDEO_FILE, mVideoName);
-            //i.putExtra("KEY1", "Value to be used by the service");
-            context.startService(i);
-            Log.w("Httpd", "Web server initialized.");
+            if(inputIntent.getIntExtra("LIVE555", 0) == 1){
+                Intent i = new Intent(context, Live555ServerService.class);
+                // potentially add data to the intent
+                mVideoName = inputIntent.getStringExtra(AppConstant.VIDEO_FILE);
+                i.putExtra(AppConstant.VIDEO_FILE, mVideoName);
+                context.startService(i);
+                // mVidAddress="rtsp://127.0.0.1:8554/matroskaFileTest";
+            }else {
+                Intent i = new Intent(context, VidServerService.class);
+                // potentially add data to the intent
+                mVideoName = inputIntent.getStringExtra(AppConstant.VIDEO_FILE);
+                i.putExtra(AppConstant.VIDEO_FILE, mVideoName);
+                //i.putExtra("KEY1", "Value to be used by the service");
+                context.startService(i);
+                Log.w("Httpd", "Web server initialized.");
+            }
             mIamServer = true;
             try {
                 new ServerThread(5454).start();
@@ -314,11 +323,9 @@ public class VideoPlayerActivity extends AppCompatActivity implements View.OnCli
             mMediaController.setAnchorView(mDanmakuController);
             mVideoView.setMediaController(mMediaController);
             if(mIamServer){
-
                 mVideoView.setVideoPath(mVideoName);
             }
             else{
-
                 Uri vidUri = Uri.parse(mVidAddress);
                 mVideoView.setVideoURI(vidUri);
             }

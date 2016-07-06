@@ -75,9 +75,17 @@ public class MainActivity extends AppCompatActivity {
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 String item = (String) listView.getItemAtPosition(position);
                 Log.d("click item", item);
-                if (item.contains("Playing")) {
+                if (item.contains("Playing Http")) {
                     String ip = item.split(":")[0];
                     String play_url = "http:/" + ip + ":8089";
+                    Intent i = new Intent(MainActivity.this, VideoPlayerActivity.class);
+                    i.putExtra(AppConstant.SOURCE_TYPE, AppConstant.REMOTE_URL);
+                    i.putExtra(AppConstant.VIDEO_URL, play_url);
+                    startActivity(i);
+                }
+                else if(item.contains("Playing Live555")){
+                    String ip = item.split(":")[0];
+                    String play_url = "rtsp:/" + ip + ":8554/matroskaFileTest";
                     Intent i = new Intent(MainActivity.this, VideoPlayerActivity.class);
                     i.putExtra(AppConstant.SOURCE_TYPE, AppConstant.REMOTE_URL);
                     i.putExtra(AppConstant.VIDEO_URL, play_url);

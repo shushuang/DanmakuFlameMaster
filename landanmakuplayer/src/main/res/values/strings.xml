@@ -15,4 +15,14 @@
     <string name="release">release</string>
     <string name="rotate">旋转屏幕</string>
     <string name="title_activity_main2">Main2Activity</string>
+
+
+        <string-array
+            name="array_menu">
+            <item>Http单播(支持h264 mp4视频)</item>
+            <item>live555组播(测试)</item>
+            <item>删除</item>
+        </string-array>
+
+
 </resources>

@@ -13,6 +13,7 @@ import android.os.Message;
 import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
 import android.text.format.Formatter;
+import android.view.ContextMenu;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -46,6 +47,9 @@ import java.util.List;
  * Created by ss on 4/17/16.
  */
 public class LibraryActivity extends AppCompatActivity  implements AdapterView.OnItemClickListener{
+    private static final int MENU_HTTPPLAY = 0;
+    private static final int MENU_LIVE555_MULTICAST = 1;
+    private static final int MENU_DELETE = 2;
     private Menu libMenu;
     List<VideoInfo> mp4Rows;
     LinkedHashSet<VideoInfo> mp4Set;
@@ -65,10 +69,66 @@ public class LibraryActivity extends AppCompatActivity  implements AdapterView.O
         mp4Set = new LinkedHashSet<VideoInfo>();
         LoadFromCache();
         mAdapter = new Mp4GalleryAdapter(this, mp4Rows);
-        listView.setAdapter(mAdapter);;
+        listView.setAdapter(mAdapter);
+        registerForContextMenu(listView);
+
         sender = new SenderThread();
         sender.start();
         listView.setOnItemClickListener(this);
+    }
+
+    @Override
+    public void onCreateContextMenu(ContextMenu menu, View v,
+                                    ContextMenu.ContextMenuInfo menuInfo) {
+        if (v.getId()==R.id.ListView) {
+            AdapterView.AdapterContextMenuInfo info = (AdapterView.AdapterContextMenuInfo)menuInfo;
+            menu.setHeaderTitle(mp4Rows.get(info.position).name);
+            String[] menuItems = getResources().getStringArray(R.array.array_menu);
+            for (int i = 0; i<menuItems.length; i++) {
+                menu.add(Menu.NONE, i, i, menuItems[i]);
+            }
+        }
+    }
+
+    @Override
+    public boolean onContextItemSelected(MenuItem item) {
+        AdapterView.AdapterContextMenuInfo info = (AdapterView.AdapterContextMenuInfo)item.getMenuInfo();
+        int menuItemIndex = item.getItemId();
+        //String[] menuItems = getResources().getStringArray(R.array.array_menu);
+        //String menuItemName = menuItems[menuItemIndex];
+        String path = mp4Rows.get(info.position).path;
+        if(menuItemIndex == MENU_HTTPPLAY){
+            // Http 单播视频
+            // 发送正在组播的信息
+            MainActivity.state = "Playing Http";
+            Message message = new Message();
+            message.what = 0;
+            message.obj = MainActivity.state;
+            sender.senderHandler.sendMessage(message);
+            // start activity
+            Intent intent = new Intent(LibraryActivity.this, VideoPlayerActivity.class);
+            intent.putExtra(AppConstant.VIDEO_FILE, path);
+            intent.putExtra(AppConstant.SOURCE_TYPE, AppConstant.LOCAL_VIDEO);
+            startActivity(intent);
+        }
+        else if(menuItemIndex == MENU_LIVE555_MULTICAST){
+            // live555 组播视频
+            MainActivity.state = "Playing Live555";
+            Message message = new Message();
+            message.what = 0;
+            message.obj = MainActivity.state;
+            sender.senderHandler.sendMessage(message);
+            // start activity
+            Intent intent = new Intent(LibraryActivity.this, VideoPlayerActivity.class);
+            intent.putExtra(AppConstant.VIDEO_FILE, path);
+            intent.putExtra(AppConstant.SOURCE_TYPE, AppConstant.LOCAL_VIDEO);
+            intent.putExtra("LIVE555", 1);
+            startActivity(intent);
+        }
+        else{
+            // 删除视频
+        }
+        return true;
     }
 
     @Override
@@ -177,13 +237,15 @@ public class LibraryActivity extends AppCompatActivity  implements AdapterView.O
 
     public void walkin(File dir) {
         String pattern = ".mp4";
+        String otherpattern = ".mkv";
         File listFile[] = dir.listFiles();
         if (listFile != null) {
             for (int i=0; i<listFile.length; i++) {
                 if (listFile[i].isDirectory()) {
                     walkin(listFile[i]);
                 } else {
-                    if (listFile[i].getName().endsWith(pattern)) {
+                    if (listFile[i].getName().endsWith(pattern)
+                            || listFile[i].getName().endsWith(otherpattern)) {
                         System.out.println(listFile[i].getPath());
                         VideoInfo newvi = new VideoInfo();
                         newvi.name = listFile[i].getName();
@@ -228,9 +290,9 @@ public class LibraryActivity extends AppCompatActivity  implements AdapterView.O
             View videoRow = inflater.inflate(R.layout.list_item, null);
             ImageView videoThumb = (ImageView) videoRow.findViewById(R.id.ImageView);
             TextView videoTitle = (TextView) videoRow.findViewById(R.id.TextView);
-            Bitmap thumb = ThumbnailUtils.createVideoThumbnail(mp4Rows.get(position).path,
-                   MediaStore.Images.Thumbnails.MINI_KIND);
-            videoThumb.setImageBitmap(thumb);
+//            Bitmap thumb = ThumbnailUtils.createVideoThumbnail(mp4Rows.get(position).path,
+//                   MediaStore.Images.Thumbnails.MINI_KIND);
+//            videoThumb.setImageBitmap(thumb);
             videoTitle.setText(mp4Rows.get(position).name);
             return videoRow;
         }
